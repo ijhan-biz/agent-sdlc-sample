@@ -25,10 +25,54 @@ function App() {
   const pilotDecision = decidePilot(currentPilotMetrics)
   const currentStage = stages[activeIndex]
   const evidence = evidenceByStage[activeStage]
+  const testStatus = patchApplied ? 'retry tests pass' : 'retry test failing'
+  const harnessStatus = gateSummary.blocked ? 'blocked' : 'pass'
+  const liveStatusItems: LiveStatusItem[] = [
+    {
+      label: '테스트 상태',
+      value: testStatus,
+      detail: patchApplied ? 'coupon.retry.idempotent 통과' : 'coupon.retry.idempotent 실패',
+      tone: patchApplied ? 'green' : 'red',
+      stageId: 'tests',
+      actionLabel: 'Failed Tests 보기',
+    },
+    {
+      label: '하네스',
+      value: harnessStatus,
+      detail: gateSummary.blocked ? 'Affected unit tests가 merge 차단' : 'required checks 통과',
+      tone: gateSummary.blocked ? 'red' : 'green',
+      stageId: 'harness',
+      actionLabel: 'Harness Gate 보기',
+    },
+    {
+      label: '파일럿',
+      value: pilotDecision.decision,
+      detail: pilotDecision.decision === 'Go' ? '파일럿 확산 가능' : 'Required checks 실패로 No-Go',
+      tone: pilotDecision.decision === 'Go' ? 'green' : 'red',
+      stageId: 'pilot',
+      actionLabel: 'Pilot 판단 보기',
+    },
+  ]
 
   const reset = () => {
     setActiveStage('bug')
     setPatchApplied(false)
+  }
+
+  const getStageBadge = (stageId: StageId) => {
+    if (stageId === 'tests') {
+      return patchApplied ? 'PASS' : 'FAIL'
+    }
+
+    if (stageId === 'harness') {
+      return gateSummary.blocked ? 'BLOCKED' : 'PASS'
+    }
+
+    if (stageId === 'pilot') {
+      return pilotDecision.decision.toUpperCase()
+    }
+
+    return null
   }
 
   return (
@@ -50,6 +94,9 @@ function App() {
           <button type="button" onClick={() => setActiveStage(nextStage(activeStage))} disabled={activeIndex === stages.length - 1}>
             다음 단계
           </button>
+          <button type="button" className="danger" onClick={() => setActiveStage('tests')}>
+            Failed Tests 보기
+          </button>
           <button type="button" className="secondary" onClick={() => setPatchApplied(true)}>
             최소 패치 적용
           </button>
@@ -61,9 +108,28 @@ function App() {
 
       <section className="status-strip" aria-label="데모 상태 요약">
         <StatusPill label="현재 단계" value={`${activeIndex + 1}. ${currentStage.title}`} tone="blue" />
-        <StatusPill label="테스트 상태" value={patchApplied ? 'retry tests pass' : 'retry test failing'} tone={patchApplied ? 'green' : 'red'} />
-        <StatusPill label="하네스" value={gateSummary.blocked ? 'blocked' : 'pass'} tone={gateSummary.blocked ? 'red' : 'green'} />
-        <StatusPill label="파일럿" value={pilotDecision.decision} tone="yellow" />
+        <StatusPill label="테스트 상태" value={testStatus} tone={patchApplied ? 'green' : 'red'} />
+        <StatusPill label="하네스" value={harnessStatus} tone={gateSummary.blocked ? 'red' : 'green'} />
+        <StatusPill label="파일럿" value={pilotDecision.decision} tone={pilotDecision.decision === 'Go' ? 'green' : 'red'} />
+      </section>
+
+      <section className="live-status-panel" aria-label="실제 현황">
+        <div className="live-status-heading">
+          <span className="eyebrow">Live status</span>
+          <h2>실제 현황</h2>
+        </div>
+        <div className="live-status-grid">
+          {liveStatusItems.map((item) => (
+            <article className={`live-status-card ${item.tone}`} key={item.label}>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <p>{item.detail}</p>
+              <button type="button" className="mini-button" onClick={() => setActiveStage(item.stageId)}>
+                {item.actionLabel}
+              </button>
+            </article>
+          ))}
+        </div>
       </section>
 
       <div className="demo-layout">
@@ -80,6 +146,7 @@ function App() {
                   <span className="step-number">{index + 1}</span>
                   <span>
                     <strong>{stage.title}</strong>
+                    {getStageBadge(stage.id) ? <b className={`stage-badge ${getStageBadge(stage.id)?.toLowerCase().replace(/[^a-z]+/g, '-')}`}>{getStageBadge(stage.id)}</b> : null}
                     <em>{stage.slideRange}</em>
                     <small>{stage.summary}</small>
                   </span>
@@ -175,7 +242,7 @@ function renderStage(
     const result = patchApplied ? testResults.fixed : testResults.failing
     return (
       <div className="stage-grid two">
-        <InfoCard title={result.title} tone={patchApplied ? 'green' : 'red'}>
+        <InfoCard title={`Failed Tests: ${result.title}`} tone={patchApplied ? 'green' : 'red'}>
           <p>{result.summary}</p>
           <p className="callout">{patchApplied ? '패치 후 retry case가 통과합니다.' : '이 실패가 발표의 핵심 장면입니다.'}</p>
         </InfoCard>
@@ -213,6 +280,15 @@ function renderStage(
       />
     </div>
   )
+}
+
+interface LiveStatusItem {
+  label: string
+  value: string
+  detail: string
+  tone: 'green' | 'red'
+  stageId: StageId
+  actionLabel: string
 }
 
 function StatusPill({ label, value, tone }: { label: string; value: string; tone: 'blue' | 'green' | 'yellow' | 'red' }) {
