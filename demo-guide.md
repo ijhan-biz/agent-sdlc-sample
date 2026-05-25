@@ -5,10 +5,10 @@
 ## 1. 시작
 
 ```bash
-npm run demo
+npm run demo -- --port 5173
 ```
 
-브라우저에서 앱을 열고 첫 화면의 `Coupon API Bug` 상태를 보여줍니다.
+브라우저에서 `http://127.0.0.1:5173/`을 열고 첫 화면의 `Coupon API Bug` 상태를 보여줍니다. 앱 왼쪽 단계에는 강의 슬라이드 범위가 함께 표시됩니다.
 
 말할 문장:
 
@@ -16,30 +16,31 @@ npm run demo
 
 ## 2. 단계별 진행
 
-1. `Coupon API Bug`
+1. Slides 4-9 · `Coupon API Bug`
    - 모호한 버그와 재현 요청을 보여줍니다.
    - 운영 로그 원문이 아니라 더미 데이터를 사용한다고 강조합니다.
 
-2. `Acceptance Criteria`
+2. Slide 10 · `Acceptance Criteria`
    - AC와 테스트 후보를 보여줍니다.
    - 좋은 PR은 좋은 질문에서 시작한다고 말합니다.
 
-3. `Coding Agent PR`
+3. Slides 11-14 · `Coding Agent PR`
    - 작은 이슈만 비동기로 위임한다는 점을 강조합니다.
    - PR은 완성이 아니라 리뷰 요청이라고 설명합니다.
 
-4. `Failed Tests`
+4. Slides 15-16 · `Failed Tests`
    - 첫 번째로는 실패 상태를 보여줍니다.
    - 이 실패가 하네스의 핵심 장면입니다.
+   - 이 시점에는 `최소 패치 적용` 버튼을 아직 누르지 않습니다.
 
-5. `최소 패치 적용`
+5. Slides 17-19 · `최소 패치 적용`
    - 상단의 `최소 패치 적용` 버튼을 누릅니다.
    - 테스트와 하네스 상태가 통과로 바뀌는 것을 보여줍니다.
 
-6. `Harness Gate`
+6. Slides 17-19 · `Harness Gate`
    - unit, label, CODEOWNERS, secret scan, rollback 조건을 보여줍니다.
 
-7. `Pilot Go/No-Go`
+7. Slides 20-23 · `Pilot Go/No-Go`
    - 파일럿은 속도만 보지 않고 보안, 리뷰 큐, required checks를 같이 본다고 마무리합니다.
 
 ## 3. 실패했을 때 말할 문장

@@ -41,6 +41,7 @@ function App() {
             모호한 이슈를 AC로 바꾸고, 작은 PR을 만들고, 실패 테스트와 하네스 게이트를 거쳐
             파일럿 Go/No-Go까지 이어지는 발표용 데모입니다.
           </p>
+          <p className="demo-url">강의 슬라이드 연결: Slides 4-23 · 실행 URL: http://127.0.0.1:5173/</p>
         </div>
         <div className="hero-actions" aria-label="데모 컨트롤">
           <button type="button" onClick={() => setActiveStage(previousStage(activeStage))} disabled={activeIndex === 0}>
@@ -79,6 +80,7 @@ function App() {
                   <span className="step-number">{index + 1}</span>
                   <span>
                     <strong>{stage.title}</strong>
+                    <em>{stage.slideRange}</em>
                     <small>{stage.summary}</small>
                   </span>
                 </button>
@@ -92,6 +94,11 @@ function App() {
             <p className="eyebrow">{currentStage.mode}</p>
             <h2>{currentStage.title}</h2>
             <p>{currentStage.summary}</p>
+          </div>
+          <div className="lecture-bridge" aria-label="강의와 데모 연결">
+            <span>{currentStage.slideRange}</span>
+            <strong>{currentStage.lectureBridge}</strong>
+            <p>{currentStage.demoAction}</p>
           </div>
           {renderStage(activeStage, patchApplied, gates, currentPilotMetrics, pilotDecision.decision)}
         </section>

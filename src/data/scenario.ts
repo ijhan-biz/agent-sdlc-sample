@@ -7,6 +7,9 @@ export interface DemoStage {
   title: string
   mode: string
   summary: string
+  slideRange: string
+  lectureBridge: string
+  demoAction: string
 }
 
 export interface EvidenceItem {
@@ -21,36 +24,54 @@ export const stages: DemoStage[] = [
     title: 'Coupon API Bug',
     mode: 'Issue intake',
     summary: '모바일 재시도 상황에서 같은 쿠폰이 두 번 차감되는 모호한 버그를 접수한다.',
+    slideRange: 'Slides 4-9',
+    lectureBridge: '강의에서는 “바로 고쳐줘” 전에 문제를 작업 계약으로 바꿔야 한다고 설명한다.',
+    demoAction: '왼쪽 1번 Coupon API Bug를 열고 endpoint, signal, reproduction request를 보여준다.',
   },
   {
     id: 'ac',
     title: 'Acceptance Criteria',
     mode: 'Agent Mode',
     summary: 'AI에게 바로 고치라고 하지 않고 재현 조건, AC, 테스트 후보를 먼저 만든다.',
+    slideRange: 'Slide 10',
+    lectureBridge: 'Agent Mode의 첫 가치는 코드 생성이 아니라 질문 생성과 AC 정리다.',
+    demoAction: '2번 Acceptance Criteria를 클릭하고 AC와 연결된 test id를 읽어준다.',
   },
   {
     id: 'pr',
     title: 'Coding Agent PR',
     mode: 'Async PR',
     summary: 'idempotencyKey 처리만 좁게 잘라 Coding Agent에 위임한다.',
+    slideRange: 'Slides 11-14',
+    lectureBridge: 'Coding Agent에는 큰 문제 전체가 아니라 좁고 검증 가능한 PR 계약만 맡긴다.',
+    demoAction: '3번 Coding Agent PR을 클릭하고 changed files와 PR description을 보여준다.',
   },
   {
     id: 'tests',
     title: 'Failed Tests',
     mode: 'Verify',
     summary: 'retry 테스트가 실패하고 required checks가 머지를 차단하는 장면을 보여준다.',
+    slideRange: 'Slides 15-16',
+    lectureBridge: '가장 중요한 장면은 AI PR이 실패하고 required checks가 머지를 막는 순간이다.',
+    demoAction: '4번 Failed Tests를 클릭하고 FAIL 로그를 보여준 뒤, 아직 최소 패치 적용 버튼은 누르지 않는다.',
   },
   {
     id: 'harness',
     title: 'Harness Gate',
     mode: 'Harness Engineering',
     summary: '테스트, 라벨, CODEOWNERS, secret scan, rollback 조건을 게이트로 묶는다.',
+    slideRange: 'Slides 17-19',
+    lectureBridge: 'Harness는 테스트, 정책, 데이터 경계, 리뷰, 롤백을 하나의 실행 환경으로 묶는다.',
+    demoAction: '최소 패치 적용 버튼을 누른 뒤 5번 Harness Gate에서 FAIL이 PASS로 바뀌는 것을 보여준다.',
   },
   {
     id: 'pilot',
     title: 'Pilot Go/No-Go',
     mode: 'Operating model',
     summary: '전사 도입 대신 1개 팀, 1개 repo, 2주 파일럿의 판단 기준으로 닫는다.',
+    slideRange: 'Slides 20-23',
+    lectureBridge: '도입 판단은 기능표가 아니라 데이터 경계, required checks, 리뷰 p95 같은 운영 기준으로 닫는다.',
+    demoAction: '6번 Pilot Go/No-Go를 클릭하고 패치 전 No-Go, 패치 후 Go 판단이 어떻게 바뀌는지 연결한다.',
   },
 ]
 
