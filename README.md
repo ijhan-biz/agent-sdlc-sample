@@ -275,6 +275,79 @@ npm run validate
 
 `npm run validate`는 `npm run test`, `npm run build`, fixed mode strict harness를 순서대로 실행합니다. 발표 전에는 이 명령이 통과하는지 먼저 확인하고, 발표 중에는 브라우저에서 `리셋` -> `Failed Tests` -> `최소 패치 적용` -> `Harness Gate` 순서로 전후 변화를 보여주는 것이 가장 안정적입니다.
 
+## 구현된 하네스 상세 설명
+
+이 프로젝트의 하네스는 AI가 만든 패치를 그대로 신뢰하는 장치가 아닙니다. 같은 쿠폰 retry 시나리오를 실제 in-memory runner로 실행하고, 그 결과를 SLI/SLO, 정책 파일, 운영 준비 artifact와 함께 평가해 `blocked` 또는 `pass`를 결정하는 로컬 데모용 gate입니다.
+
+하네스의 실행 흐름은 아래 순서입니다.
+
+| 순서 | 단계 | 구현 위치 | 역할 |
+| --- | --- | --- | --- |
+| 1 | Demo fixture 로드 | `src/data/redeem-fixture.json` | `SPRING-20`, `demo-user-42`, `order-8842-retry-1` 더미 요청과 초기 잔액을 제공합니다. |
+| 2 | Coupon runner 실행 | `src/domain/coupon.ts` | `buggy` 또는 `fixed` 모드로 같은 retry 요청을 두 번 처리합니다. |
+| 3 | Scenario report 생성 | `src/lib/gateEvaluator.ts` | `mode`, `request`, `couponResult`, `sli`, `gates`, `summary`, `pilotMetrics`, `pilotDecision`을 하나의 `CouponScenarioReport`로 만듭니다. |
+| 4 | Artifact gate 평가 | `config/harness.json`, `config/owners.json`, `config/observability.json`, `docs/rollback.md` | 테스트 결과뿐 아니라 owner, rollback, data boundary, observability readiness를 함께 확인합니다. |
+| 5 | UI/CLI 출력 | `src/App.tsx`, `scripts/demoScenario.ts` | React 화면과 터미널 명령이 같은 `CouponScenarioReport`를 보여줍니다. |
+
+### SLI/SLO 기준
+
+기준값은 `config/harness.json`과 `config/observability.json`에 들어 있습니다.
+
+| 항목 | fixed mode 기대값 | buggy mode 재현값 | 의미 |
+| --- | --- | --- | --- |
+| Balance delta | `-1` | `-2` | 같은 `idempotencyKey` retry는 쿠폰을 한 번만 차감해야 합니다. |
+| Duplicate charge detected | `false` | `true` | 중복 차감이 감지되면 safe target을 벗어난 것입니다. |
+| Reused first result | `true` | `false` | fixed mode는 첫 처리 결과를 재사용해야 합니다. |
+| Harness blocked state | `false` | `true` | fixed strict harness는 통과해야 하고, buggy mode는 차단되어야 합니다. |
+| Data boundary | `demo-only` | `demo-only` | 운영 로그나 고객 원문이 아니라 데모 fixture만 사용합니다. |
+| Forbidden patterns | `0 hits` | `0 hits` | fixture, owner config, rollback note 안에 금지 패턴이 없어야 합니다. |
+
+여기서 `Go`는 프로덕션 배포 승인이 아니라 이 로컬 데모/파일럿 하네스 기준을 통과했다는 뜻입니다. 실제 운영 트래픽, 실제 모니터링 백엔드, 실제 승인 워크플로까지 보장하는 것은 아닙니다.
+
+### 8개 Gate
+
+하네스는 `config/harness.json`의 `requiredGates`에 정의된 8개 gate를 평가합니다.
+
+| Gate | Source | Pass 조건 | 실패 시 의미 |
+| --- | --- | --- | --- |
+| `scenario-reproduction` | `runner` | 현재 mode의 관측값이 `expectedModes`와 일치합니다. | runner 출력이 설정된 buggy/fixed 기대값과 달라 데모 재현성이 깨졌습니다. |
+| `coupon-idempotency` | `runner` | 관측값이 `safeTarget`과 일치합니다: `balanceDelta=-1`, `duplicateChargeDetected=false`, `reusedResult=true`. | retry path가 안전 기준을 벗어났습니다. buggy mode에서는 이 gate가 실패해야 정상입니다. |
+| `harness-config` | `config/harness.json` | required gates, buggy/fixed 기대값, 금지 패턴 목록이 모두 정의되어 있습니다. | 하네스 자체의 기준 파일이 누락되었거나 불완전합니다. |
+| `owner-coverage` | `config/owners.json` | `coupon-redeem` owner가 있고 review requirement와 관련 path가 매핑되어 있습니다. | 변경 책임자와 리뷰 경계가 불명확합니다. 실제 리뷰 완료를 검증하는 gate는 아닙니다. |
+| `rollback-ready` | `docs/rollback.md` | rollback trigger, owner, disable path, validation command가 문서에 있습니다. | 파일럿 중단과 복구 절차가 문서화되지 않았습니다. 실제 롤백 실행 여부를 검증하는 gate는 아닙니다. |
+| `data-boundary` | `src/data/redeem-fixture.json` | fixture가 `demo-only`이고 허용된 `memberId`, `couponId` prefix를 사용합니다. | 운영 데이터나 허용되지 않은 식별자가 데모 입력에 섞였을 수 있습니다. |
+| `observability-ready` | `config/observability.json` | duplicate charge alert, retry idempotency SLI, dashboard panel, review metric source가 설정되어 있습니다. | 관측성 준비 artifact가 부족합니다. 실시간 telemetry 수집을 검증하는 gate는 아닙니다. |
+| `forbidden-patterns` | `config/harness.json forbiddenPatterns` | fixture, owner config, rollback note에서 금지 패턴이 0건입니다. | secret/customer-data 형태의 문자열이 데모 artifact에 포함됐을 수 있습니다. repo 전체 스캔은 아닙니다. |
+
+`buggy` mode는 모든 gate가 실패하는 모드가 아닙니다. `scenario-reproduction`은 `balanceDelta=-2`, `duplicateChargeDetected=true`를 기대값대로 재현했기 때문에 통과합니다. 대신 `coupon-idempotency`가 safe target과 맞지 않아 하네스가 `blocked`가 됩니다.
+
+`fixed` mode는 현재 artifact들이 모두 존재하고 조건을 만족할 때 `pass`가 됩니다. `fixed`라도 rollback 문서, observability config, data boundary fixture, owner config가 누락되거나 깨지면 하네스는 `blocked`로 바뀝니다.
+
+### CLI 옵션과 Exit 정책
+
+하네스 CLI는 `scripts/demoScenario.ts`에 있습니다.
+
+| 명령 | 용도 |
+| --- | --- |
+| `npm run demo:scenario -- --mode buggy` | 중복 차감 재현과 `blocked` 판정을 터미널에서 보여줍니다. 기본적으로 exit code는 성공입니다. |
+| `npm run demo:scenario -- --mode fixed` | idempotency fix가 적용된 안전 경로와 `pass` 판정을 보여줍니다. |
+| `npm run --silent demo:scenario -- --mode buggy --json` | 같은 `CouponScenarioReport`를 JSON으로 출력합니다. `--json`은 출력 형식만 바꾸고 판정은 바꾸지 않습니다. |
+| `npm run demo:scenario -- --mode fixed --strict` | `summary.blocked=true`이면 non-zero exit로 실패합니다. |
+| `npm run harness:strict` | fixed mode strict harness를 실행합니다. |
+| `npm run validate` | `test`, `build`, fixed strict harness를 순서대로 실행합니다. |
+
+`--mode`를 생략하면 CLI는 기본값으로 `fixed`를 사용합니다. 발표 중 실패 장면을 보여줄 때는 반드시 `--mode buggy`를 명시합니다.
+
+### 장애 시나리오와 대응
+
+| 시나리오 | 감지 gate | 기대 판정 | 대응 |
+| --- | --- | --- | --- |
+| retry 중복 차감 발생 | `coupon-idempotency` | `blocked`, Pilot `No-Go` | `npm run demo:scenario -- --mode buggy`로 증거를 보여준 뒤 fixed path를 확인합니다. |
+| rollback 또는 observability artifact 누락 | `rollback-ready`, `observability-ready` | `blocked` | `docs/rollback.md`와 `config/observability.json`을 복구한 뒤 `npm run harness:strict`를 다시 실행합니다. |
+| demo boundary 밖 데이터 또는 금지 패턴 유입 | `data-boundary`, `forbidden-patterns` | `blocked` | fixture와 artifact에서 운영 데이터/금지 문자열을 제거하고 JSON fallback으로 evidence를 확인합니다. |
+
+No-Go가 나오면 `npm run --silent demo:scenario -- --mode buggy --json`으로 구조화된 evidence를 확보하고, `docs/rollback.md`의 disable path와 traffic action을 따른 뒤 `npm run harness:strict`로 fixed path를 재검증합니다.
+
 ## 발표 전 점검
 
 발표 전에 한 번 실행해 두면 좋습니다.
