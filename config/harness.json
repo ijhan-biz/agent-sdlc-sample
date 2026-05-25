@@ -1,0 +1,45 @@
+{
+  "scenario": "coupon-redeem-idempotency",
+  "safeTarget": {
+    "balanceDelta": -1,
+    "duplicateChargeDetected": false,
+    "reusedResult": true
+  },
+  "expectedModes": {
+    "buggy": {
+      "balanceDelta": -2,
+      "duplicateChargeDetected": true,
+      "reusedResult": false,
+      "blocked": true
+    },
+    "fixed": {
+      "balanceDelta": -1,
+      "duplicateChargeDetected": false,
+      "reusedResult": true,
+      "blocked": false
+    }
+  },
+  "requiredGates": [
+    "scenario-reproduction",
+    "coupon-idempotency",
+    "harness-config",
+    "owner-coverage",
+    "rollback-ready",
+    "data-boundary",
+    "observability-ready",
+    "forbidden-patterns"
+  ],
+  "dataBoundary": {
+    "allowedDataClass": "demo-only",
+    "allowedMemberIdPrefix": "demo-user",
+    "allowedCouponPrefix": "SPRING"
+  },
+  "forbiddenPatterns": [
+    "sk_live_",
+    "prod-log-",
+    "customer_email",
+    "resident_registration_number",
+    "Bearer ",
+    "BEGIN PRIVATE KEY"
+  ]
+}

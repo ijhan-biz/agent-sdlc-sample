@@ -1,0 +1,10 @@
+{
+  "dataClass": "demo-only",
+  "initialBalance": 2,
+  "retryCount": 2,
+  "request": {
+    "couponId": "SPRING-20",
+    "memberId": "demo-user-42",
+    "idempotencyKey": "order-8842-retry-1"
+  }
+}

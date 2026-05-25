@@ -2,44 +2,44 @@ import { useMemo, useState, type ReactNode } from 'react'
 import './App.css'
 import {
   acceptanceCriteria,
-  blockedPilotMetrics,
   couponBug,
   evidenceByStage,
-  pilotMetrics,
   pullRequest,
   stages,
-  testResults,
   type StageId,
 } from './data/scenario'
+import { demoHarnessArtifacts } from './data/harnessArtifacts'
 import { getStageIndex, nextStage, previousStage } from './lib/demoRunner'
-import { decidePilot, evaluateHarness, summarizeGates } from './lib/gateEvaluator'
+import { createScenarioReport, type CouponScenarioReport } from './lib/gateEvaluator'
 
 function App() {
   const [activeStage, setActiveStage] = useState<StageId>('bug')
   const [patchApplied, setPatchApplied] = useState(false)
 
   const activeIndex = getStageIndex(activeStage)
-  const gates = useMemo(() => evaluateHarness(patchApplied), [patchApplied])
-  const gateSummary = summarizeGates(gates)
-  const currentPilotMetrics = patchApplied ? pilotMetrics : blockedPilotMetrics
-  const pilotDecision = decidePilot(currentPilotMetrics)
+  const scenarioMode = patchApplied ? 'fixed' : 'buggy'
+  const scenarioReport = useMemo(() => createScenarioReport(scenarioMode, demoHarnessArtifacts), [scenarioMode])
+  const gateSummary = scenarioReport.summary
+  const pilotDecision = scenarioReport.pilotDecision
   const currentStage = stages[activeIndex]
   const evidence = evidenceByStage[activeStage]
-  const testStatus = patchApplied ? 'retry tests pass' : 'retry test failing'
+  const testStatus = scenarioReport.couponResult.duplicateChargeDetected ? 'retry test failing' : 'retry tests pass'
   const harnessStatus = gateSummary.blocked ? 'blocked' : 'pass'
   const liveStatusItems: LiveStatusItem[] = [
     {
       label: '테스트 상태',
       value: testStatus,
-      detail: patchApplied ? 'coupon.retry.idempotent 통과' : 'coupon.retry.idempotent 실패',
-      tone: patchApplied ? 'green' : 'red',
+      detail: scenarioReport.couponResult.duplicateChargeDetected
+        ? `balance delta ${scenarioReport.couponResult.balanceDelta}`
+        : 'idempotencyKey 결과 재사용',
+      tone: scenarioReport.couponResult.duplicateChargeDetected ? 'red' : 'green',
       stageId: 'tests',
       actionLabel: 'Failed Tests 보기',
     },
     {
       label: '하네스',
       value: harnessStatus,
-      detail: gateSummary.blocked ? 'Affected unit tests가 merge 차단' : 'required checks 통과',
+      detail: gateSummary.blocked ? `${gateSummary.failed}개 gate가 merge 차단` : 'required checks 통과',
       tone: gateSummary.blocked ? 'red' : 'green',
       stageId: 'harness',
       actionLabel: 'Harness Gate 보기',
@@ -47,7 +47,7 @@ function App() {
     {
       label: '파일럿',
       value: pilotDecision.decision,
-      detail: pilotDecision.decision === 'Go' ? '파일럿 확산 가능' : 'Required checks 실패로 No-Go',
+      detail: pilotDecision.decision === 'Go' ? '파일럿 확산 가능' : pilotDecision.reasons.join(', '),
       tone: pilotDecision.decision === 'Go' ? 'green' : 'red',
       stageId: 'pilot',
       actionLabel: 'Pilot 판단 보기',
@@ -167,7 +167,7 @@ function App() {
             <strong>{currentStage.lectureBridge}</strong>
             <p>{currentStage.demoAction}</p>
           </div>
-          {renderStage(activeStage, patchApplied, gates, currentPilotMetrics, pilotDecision.decision)}
+          {renderStage(activeStage, scenarioReport)}
         </section>
 
         <aside className="evidence-panel" aria-label="현재 단계 증거">
@@ -187,10 +187,7 @@ function App() {
 
 function renderStage(
   activeStage: StageId,
-  patchApplied: boolean,
-  gates: ReturnType<typeof evaluateHarness>,
-  currentPilotMetrics: typeof pilotMetrics,
-  pilotDecision: string,
+  scenarioReport: CouponScenarioReport,
 ) {
   if (activeStage === 'bug') {
     return (
@@ -204,7 +201,7 @@ function renderStage(
             <dd>{couponBug.signal}</dd>
           </dl>
         </InfoCard>
-        <CodeBlock title="Reproduction request" code={couponBug.request} />
+        <CodeBlock title="Reproduction request" code={formatRequestBlock(scenarioReport)} />
       </div>
     )
   }
@@ -239,14 +236,18 @@ function renderStage(
   }
 
   if (activeStage === 'tests') {
-    const result = patchApplied ? testResults.fixed : testResults.failing
+    const patchApplied = scenarioReport.mode === 'fixed'
     return (
       <div className="stage-grid two">
-        <InfoCard title={`Failed Tests: ${result.title}`} tone={patchApplied ? 'green' : 'red'}>
-          <p>{result.summary}</p>
+        <InfoCard title={`Runner result: ${patchApplied ? 'retry test is passing' : 'retry test is failing'}`} tone={patchApplied ? 'green' : 'red'}>
+          <p>
+            {patchApplied
+              ? '최소 패치 후 동일 idempotencyKey 요청은 첫 결과를 재사용합니다.'
+              : '실제 in-memory runner에서 retry 요청이 두 번 차감되는 상태를 재현했습니다.'}
+          </p>
           <p className="callout">{patchApplied ? '패치 후 retry case가 통과합니다.' : '이 실패가 발표의 핵심 장면입니다.'}</p>
         </InfoCard>
-        <CodeBlock title="Vitest output" code={result.log} />
+        <CodeBlock title="Runner output" code={formatRunnerOutput(scenarioReport)} />
       </div>
     )
   }
@@ -254,9 +255,17 @@ function renderStage(
   if (activeStage === 'harness') {
     return (
       <div className="gate-grid">
-        {gates.map((gate) => (
+        {scenarioReport.gates.map((gate) => (
           <InfoCard key={gate.id} title={gate.label} tone={gate.status === 'pass' ? 'green' : 'red'}>
             <p>{gate.detail}</p>
+            <dl className="gate-meta">
+              <dt>Observed</dt>
+              <dd>{gate.observed}</dd>
+              <dt>Expected</dt>
+              <dd>{gate.expected}</dd>
+              <dt>Source</dt>
+              <dd>{gate.source}</dd>
+            </dl>
             <span className="linked-test">{gate.status.toUpperCase()}</span>
           </InfoCard>
         ))}
@@ -266,20 +275,62 @@ function renderStage(
 
   return (
     <div className="stage-grid two">
-      <InfoCard title={`Pilot decision: ${pilotDecision}`} tone="yellow">
+      <InfoCard title={`Pilot decision: ${scenarioReport.pilotDecision.decision}`} tone="yellow">
         <p>전사 롤아웃 전에 1개 팀, 1개 repo, 2주 파일럿으로 판단합니다.</p>
         <ul>
-          {currentPilotMetrics.map((metric) => (
+          {scenarioReport.pilotMetrics.map((metric) => (
             <li key={metric.id}>{metric.label}: {metric.value}</li>
           ))}
         </ul>
       </InfoCard>
       <CodeBlock
         title="Decision memo"
-        code={`Decision: ${pilotDecision}\nScope: coupon-api sample repo\nGo condition: no sensitive data, 100% required checks, review p95 <= 1 day\nNext: repeat Agent Mode -> Coding Agent -> Harness loop for 2 weeks`}
+        code={formatDecisionMemo(scenarioReport)}
       />
     </div>
   )
+}
+
+function formatRequestBlock(report: CouponScenarioReport) {
+  return `POST /api/coupons/redeem
+${JSON.stringify(report.request, null, 2)}`
+}
+
+function formatRunnerOutput(report: CouponScenarioReport) {
+  const result = report.couponResult
+
+  if (result.duplicateChargeDetected) {
+    return `FAIL coupon.retry.idempotent
+Expected coupon balance to decrement once
+Received balance delta: ${result.balanceDelta}
+
+Assertion:
+expect(redemptions).toHaveLength(1)
+received ${result.redemptionRecords.length} redemption records
+
+Harness: ${report.summary.blocked ? 'blocked' : 'pass'}
+Pilot: ${report.pilotDecision.decision}`
+  }
+
+  return `PASS coupon.retry.idempotent
+PASS coupon.already-used.reject
+PASS contract.response-shape.stable
+
+Balance delta: ${result.balanceDelta}
+Redemption records: ${result.redemptionRecords.length}
+Reused first result: ${result.reusedResult}
+
+Harness: ${report.summary.blocked ? 'blocked' : 'pass'}
+Pilot: ${report.pilotDecision.decision}`
+}
+
+function formatDecisionMemo(report: CouponScenarioReport) {
+  return `Decision: ${report.pilotDecision.decision}
+Mode: ${report.mode}
+Scope: coupon-api sample repo
+Harness: ${report.summary.blocked ? 'blocked' : 'pass'} (${report.summary.failed}/${report.summary.total} failing gates)
+Go condition: no sensitive data, 100% required checks, review p95 <= 1 day
+Next: repeat Agent Mode -> Coding Agent -> Harness loop for 2 weeks`
 }
 
 interface LiveStatusItem {

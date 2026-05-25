@@ -1,0 +1,40 @@
+{
+  "slis": [
+    {
+      "id": "duplicate-charge-rate",
+      "label": "Duplicate charge count",
+      "target": "0 duplicate charges in fixed mode"
+    },
+    {
+      "id": "retry-idempotency-rate",
+      "label": "Retry idempotency pass rate",
+      "target": "100% for the same idempotencyKey in fixed mode"
+    },
+    {
+      "id": "harness-block-rate",
+      "label": "Harness blocked state",
+      "target": "0 blocked fixed runs before pilot Go"
+    }
+  ],
+  "alerts": [
+    {
+      "id": "duplicate-charge-alert",
+      "signal": "duplicateChargeDetected",
+      "threshold": 0,
+      "channel": "demo-pager",
+      "owner": "coupon-service-owner"
+    }
+  ],
+  "dashboard": {
+    "name": "Coupon Retry Safety",
+    "panels": [
+      "duplicate charge count",
+      "retry idempotency pass rate",
+      "harness blocked state"
+    ]
+  },
+  "reviewQueue": {
+    "p95Days": 0.8,
+    "source": "demo pilot fixture"
+  }
+}

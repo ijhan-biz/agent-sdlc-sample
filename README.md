@@ -2,7 +2,7 @@
 
 Agentic SDLC 세미나에서 함께 실행하는 React 기반 발표용 데모입니다. 발표 스토리라인은 `쿠폰 API 버그 -> AC 생성 -> Coding Agent PR -> 실패 테스트 -> Harness Gate -> Pilot Go/No-Go` 순서로 구성되어 있습니다.
 
-이 데모는 실제 운영계를 건드리는 라이브 코딩이 아니라, 강의 슬라이드와 맞춰 보여주는 상태 기반 UI입니다. 핵심은 AI가 한 번에 코드를 맞히는 장면이 아니라, AI PR이 실패했을 때 테스트와 하네스가 안전하게 막고, 실패 로그를 다시 입력으로 바꿔 수정하는 장면입니다.
+이 데모는 실제 운영계를 건드리는 라이브 코딩이 아니라, 로컬 in-memory 쿠폰 도메인 runner와 artifact 기반 하네스를 함께 실행하는 발표용 데모입니다. 핵심은 AI가 한 번에 코드를 맞히는 장면이 아니라, AI PR이 실패했을 때 테스트와 하네스가 안전하게 막고, 실패 로그를 다시 입력으로 바꿔 수정하는 장면입니다.
 
 ## 빠른 실행
 
@@ -31,9 +31,80 @@ macOS에서는 서버를 띄운 뒤 별도 터미널에서 바로 열 수 있습
 open http://127.0.0.1:5173/
 ```
 
+## 구체적인 실행 방법
+
+처음 받은 저장소라면 의존성을 먼저 설치합니다.
+
+```bash
+cd /Users/hacbook/ms/workspace/agent-sdlc-sample
+npm install
+```
+
+발표 전에 테스트, 빌드, fixed mode strict harness가 모두 통과하는지 확인합니다.
+
+```bash
+npm run validate
+```
+
+데모 서비스를 새로 시작합니다.
+
+```bash
+npm run demo -- --port 5173
+```
+
+이미 Vite 서버가 떠 있다면 실행 중인 터미널에서 `Ctrl+C`로 종료한 뒤 같은 명령을 다시 실행합니다. 5173 포트가 다른 프로세스에 잡혀 있으면 아래 명령으로 점유 상태를 확인한 다음, 비어 있는 포트를 골라 실행합니다.
+
+```bash
+lsof -nP -iTCP:5173 -sTCP:LISTEN
+npm run demo -- --port 5174
+```
+
+서버가 정상 응답하는지 확인합니다.
+
+```bash
+curl -sSf http://127.0.0.1:5173/ | head -n 5
+```
+
+브라우저에서 데모를 엽니다.
+
+```bash
+open http://127.0.0.1:5173/
+```
+
+화면을 연 뒤 상단의 `리셋`을 눌러 `retry test failing`, `blocked`, `No-Go` 상태에서 시작합니다.
+
+터미널로 실제 buggy/fixed 시나리오도 함께 보여줄 수 있습니다.
+
+```bash
+npm run demo:scenario -- --mode buggy
+npm run demo:scenario -- --mode fixed
+```
+
+발표 중 화면이 흔들리면 JSON fallback으로 같은 하네스 결과를 확인합니다.
+
+```bash
+npm run --silent demo:scenario -- --mode buggy --json
+```
+
+서비스 재시작만 다시 해야 할 때는 아래 순서만 반복합니다.
+
+```bash
+# 실행 중인 Vite 터미널에서 Ctrl+C
+npm run demo -- --port 5173
+curl -sSf http://127.0.0.1:5173/ | head -n 5
+```
+
 ## Coupon API Bug 보는 법
 
-이 저장소의 `Coupon API Bug`는 실제 백엔드 API 서버가 아니라 발표용 React 데모 안에 들어 있는 시나리오입니다. 즉, `/api/coupons/redeem` 엔드포인트를 실제로 서비스하는 서버가 없으므로 터미널에 `POST /api/coupons/redeem`를 그대로 입력하거나 `curl -X POST http://127.0.0.1:5173/api/coupons/redeem`를 실행해 버그를 재현하는 구조가 아닙니다.
+이 저장소의 `Coupon API Bug`는 실제 백엔드 API 서버가 아니라 로컬 in-memory 도메인 runner로 재현합니다. `/api/coupons/redeem` 엔드포인트를 실제로 서비스하는 서버는 없으므로 `curl -X POST http://127.0.0.1:5173/api/coupons/redeem`가 아니라 아래 CLI를 사용합니다.
+
+```bash
+npm run demo:scenario -- --mode buggy
+npm run demo:scenario -- --mode fixed
+npm run --silent demo:scenario -- --mode buggy --json
+```
+
+CLI와 React 화면은 같은 runner/evaluator 모델을 사용합니다. `buggy` 모드는 중복 차감을 재현하고 하네스를 `blocked`로 만들며, `fixed` 모드는 같은 `idempotencyKey`의 재시도 요청이 최초 결과를 재사용해 하네스를 통과합니다.
 
 데모에서 보여주는 버그는 다음 상황입니다.
 
@@ -70,16 +141,22 @@ POST /api/coupons/redeem
 
 3. 상단의 `리셋`을 눌러 초기 상태로 맞춥니다.
 
-4. 왼쪽 타임라인의 `1. Coupon API Bug`를 엽니다.
+4. 별도 터미널에서 실제 runner가 같은 상태를 출력하는지 확인합니다.
+
+	```bash
+	npm run demo:scenario -- --mode buggy
+	```
+
+5. 왼쪽 타임라인의 `1. Coupon API Bug`를 엽니다.
 	- `Endpoint`: `POST /api/coupons/redeem`
 	- `Signal`: `retry window 2s 안에서 동일 idempotencyKey 요청이 중복 처리됨`
 	- `Reproduction request`: 위의 `SPRING-20`, `demo-user-42`, `order-8842-retry-1` 요청
 
-5. 왼쪽 타임라인의 `4. Failed Tests`로 이동합니다.
+6. 왼쪽 타임라인의 `4. Failed Tests`로 이동합니다.
 	- 상단 상태 요약의 `테스트 상태`가 `retry test failing`인지 확인합니다.
 	- `하네스`가 `blocked`인지 확인합니다.
 	- `파일럿`이 `No-Go`인지 확인합니다.
-	- 중앙의 `Vitest output`에 아래 메시지가 보이는지 확인합니다.
+	- 중앙의 `Runner output`에 아래 메시지가 보이는지 확인합니다.
 
 	```text
 	FAIL coupon.retry.idempotent
@@ -95,7 +172,7 @@ POST /api/coupons/redeem
 
 ## 정확히 보여줄 커맨드와 변화
 
-발표 중 터미널에서 실행할 커맨드는 세 종류만 사용하면 됩니다.
+발표 중 터미널에서 실행할 커맨드는 네 종류만 사용하면 됩니다.
 
 ### 1. 데모 앱 실행
 
@@ -116,9 +193,51 @@ npm run demo -- --port 5173
 | 5 | `Harness Gate` 클릭 | `Affected unit tests`가 `PASS`로 변경되고 하네스가 `pass`로 변경 |
 | 6 | `Pilot Go/No-Go` 클릭 | Decision이 `Go`로 변경 |
 
-`최소 패치 적용` 버튼은 실제 파일을 수정하는 버튼이 아니라 데모 상태를 `patchApplied=false`에서 `patchApplied=true`로 바꾸는 발표용 토글입니다. 이 토글을 통해 “패치 전에는 required checks가 막고, 패치 후에는 하네스와 파일럿 판단이 바뀐다”는 전이를 보여줍니다.
+`최소 패치 적용` 버튼은 실제 파일을 수정하지 않습니다. 대신 같은 domain runner를 `buggy` 모드에서 `fixed` 모드로 전환해 쿠폰 결과, SLI/SLO, 하네스 gate, 파일럿 판단을 다시 계산합니다.
 
-### 2. 데모 서버 확인
+### 2. 실제 시나리오 runner 실행
+
+패치 전 실패와 차단을 터미널에서 보여줍니다.
+
+```bash
+npm run demo:scenario -- --mode buggy
+```
+
+핵심 확인값은 아래와 같습니다.
+
+```text
+Balance: 2 -> 0 (delta -2)
+Redemption records: 2
+Duplicate charge detected: true
+Harness: blocked
+Pilot decision: No-Go
+```
+
+패치 후 통과 상태를 보여줍니다.
+
+```bash
+npm run demo:scenario -- --mode fixed
+```
+
+핵심 확인값은 아래와 같습니다.
+
+```text
+Balance: 2 -> 1 (delta -1)
+Redemption records: 1
+Reused first result: true
+Harness: pass
+Pilot decision: Go
+```
+
+문제가 생겼을 때는 JSON 계약으로 fallback할 수 있습니다.
+
+```bash
+npm run --silent demo:scenario -- --mode buggy --json
+```
+
+JSON에는 `mode`, `request`, `couponResult`, `sli`, `gates`, `summary`, `pilotDecision`이 포함됩니다.
+
+### 3. 데모 서버 확인
 
 별도 터미널에서 아래 명령으로 Vite 서버가 떠 있는지만 확인할 수 있습니다.
 
@@ -128,9 +247,9 @@ curl -sSf http://127.0.0.1:5173/ | head -n 5
 
 이 명령은 데모 앱의 HTML이 응답하는지 확인하는 용도입니다. Coupon API 자체를 호출하는 명령이 아닙니다.
 
-### 3. 테스트와 하네스 상태 확인
+### 4. 테스트와 하네스 상태 확인
 
-아래 명령은 데모의 상태 전이 로직이 기대대로 구성되어 있는지 확인합니다.
+아래 명령은 실제 runner, artifact 하네스, JSON 계약이 기대대로 구성되어 있는지 확인합니다.
 
 ```bash
 npm run test -- --reporter verbose
@@ -139,13 +258,14 @@ npm run test -- --reporter verbose
 정상이라면 아래 테스트가 모두 통과합니다.
 
 ```text
-✓ blocks the harness before the minimal patch is applied
-✓ passes the harness after the minimal patch is applied
-✓ returns No-Go when required checks fail
-✓ returns Go when all pilot metrics pass
+✓ reproduces the duplicate charge in buggy mode
+✓ reuses the first result in fixed mode
+✓ blocks the harness for the real buggy scenario
+✓ passes the harness for the real fixed scenario
+✓ keeps the structured gate contract stable
 ```
 
-여기서 `blocks the harness before the minimal patch is applied`는 패치 전 상태가 안전하게 막히는지 확인합니다. `passes the harness after the minimal patch is applied`는 패치 후 상태가 통과로 바뀌는지 확인합니다.
+여기서 buggy 테스트는 기본 검증을 깨는 실패 테스트가 아닙니다. `buggy` 모드가 중복 차감을 실제로 재현하고, 그 결과 하네스가 `blocked`로 판정하는지를 검증합니다.
 
 전체 검증은 아래 명령으로 실행합니다.
 
@@ -153,7 +273,7 @@ npm run test -- --reporter verbose
 npm run validate
 ```
 
-`npm run validate`는 `npm run test`와 `npm run build`를 순서대로 실행합니다. 발표 전에는 이 명령이 통과하는지 먼저 확인하고, 발표 중에는 브라우저에서 `리셋` -> `Failed Tests` -> `최소 패치 적용` -> `Harness Gate` 순서로 전후 변화를 보여주는 것이 가장 안정적입니다.
+`npm run validate`는 `npm run test`, `npm run build`, fixed mode strict harness를 순서대로 실행합니다. 발표 전에는 이 명령이 통과하는지 먼저 확인하고, 발표 중에는 브라우저에서 `리셋` -> `Failed Tests` -> `최소 패치 적용` -> `Harness Gate` 순서로 전후 변화를 보여주는 것이 가장 안정적입니다.
 
 ## 발표 전 점검
 
@@ -161,10 +281,12 @@ npm run validate
 
 ```bash
 npm run validate
+npm run demo:scenario -- --mode buggy
+npm run demo:scenario -- --mode fixed
 npm run lint
 ```
 
-`npm run validate`는 테스트와 빌드를 함께 실행합니다. 데모 URL이 떠 있는지 확인하려면 다음 명령을 사용할 수 있습니다.
+`npm run validate`는 테스트, 빌드, fixed strict harness를 함께 실행합니다. 데모 URL이 떠 있는지 확인하려면 다음 명령을 사용할 수 있습니다.
 
 ```bash
 curl -sSf http://127.0.0.1:5173/ | head -n 5
@@ -225,8 +347,8 @@ curl -sSf http://127.0.0.1:5173/ | head -n 5
 | 3 | `Coding Agent PR` | changed files, PR description, required checks | “Coding Agent에는 큰 문제 전체가 아니라 좁고 검증 가능한 PR 계약만 맡깁니다.” |
 | 4 | `Failed Tests` | retry test FAIL 로그, blocked 상태 | “오늘 데모의 핵심은 AI PR이 실패하는 순간입니다. 하네스는 이 실패를 숨기지 않고 머지를 막습니다.” |
 | 5 | `최소 패치 적용` | 버튼 클릭 후 상태 변화 | “실패 로그를 다음 입력으로 바꿔 최소 패치만 적용합니다.” |
-| 6 | `Harness Gate` | unit, label, secret scan, CODEOWNERS, rollback PASS | “PASS는 AI를 믿는다는 뜻이 아니라, 구조 검증을 통과했다는 뜻입니다.” |
-| 7 | `Pilot Go/No-Go` | Decision: Go, 파일럿 지표 | “확산 판단은 기능표가 아니라 데이터 경계, required checks, 리뷰 p95 같은 운영 기준으로 닫습니다.” |
+| 6 | `Harness Gate` | unit, owner config, data boundary, observability, rollback PASS | “PASS는 AI를 믿는다는 뜻이 아니라, 구조 검증을 통과했다는 뜻입니다.” |
+| 7 | `Pilot Go/No-Go` | Decision: Go, 파일럿 지표 | “확산 판단은 기능표가 아니라 데이터 경계, observability, required checks, 리뷰 p95 같은 운영 기준으로 닫습니다.” |
 
 ### 5. 시간별 진행 옵션
 
@@ -267,7 +389,7 @@ curl -sSf http://127.0.0.1:5173/ | head -n 5
 4. `Coding Agent PR`에서 changed files와 PR description을 보여줍니다.
 5. `Failed Tests`에서 retry test FAIL과 blocked 상태를 강조합니다.
 6. `최소 패치 적용`을 누릅니다.
-7. `Harness Gate`에서 unit, label, CODEOWNERS, secret scan, rollback 조건이 PASS로 바뀌는 것을 보여줍니다.
+7. `Harness Gate`에서 unit, owner config, data boundary, observability, rollback 조건이 PASS로 바뀌는 것을 보여줍니다.
 8. `Pilot Go/No-Go`에서 Decision이 Go로 바뀌는 기준을 설명합니다.
 
 시간이 부족하면 `Coupon API Bug`, `Failed Tests`, `Harness Gate`, `Pilot Go/No-Go`만 보여도 전체 메시지는 유지됩니다.
@@ -287,9 +409,15 @@ curl -sSf http://127.0.0.1:5173/ | head -n 5
 | 경로 | 역할 |
 | --- | --- |
 | `src/App.tsx` | 데모 화면, 버튼, 단계별 렌더링을 담당합니다. |
-| `src/data/scenario.ts` | 쿠폰 API 버그, AC, PR, 테스트 로그, Evidence, Pilot 지표를 담고 있습니다. |
-| `src/lib/gateEvaluator.ts` | 패치 적용 전후 Harness와 Pilot 판단을 계산합니다. |
+| `src/domain/coupon.ts` | buggy/fixed 쿠폰 retry 시나리오를 실제 in-memory 로직으로 실행합니다. |
+| `src/lib/gateEvaluator.ts` | CouponScenarioReport, SLI/SLO, artifact gate, Pilot 판단을 계산합니다. |
+| `config/harness.json` | safe target, expected mode, required gate, 금지 패턴을 정의합니다. |
+| `config/owners.json` | coupon artifact owner와 review requirement를 정의합니다. |
+| `config/observability.json` | duplicate charge alert, retry SLI, dashboard, review p95 fixture를 정의합니다. |
+| `docs/rollback.md` | rollback trigger, owner, disable path, traffic action, validation command를 정의합니다. |
+| `src/data/scenario.ts` | 쿠폰 API 버그, AC, PR, Evidence를 담고 있습니다. |
 | `src/lib/demoRunner.ts` | 이전/다음 단계 이동 순서를 정의합니다. |
+| `scripts/demoScenario.ts` | `buggy/fixed` scenario CLI와 JSON fallback을 제공합니다. |
 | `demo-guide.md` | 발표자가 짧게 참고할 수 있는 별도 진행표입니다. |
 
 ## 데모 구성 데이터
@@ -298,17 +426,21 @@ curl -sSf http://127.0.0.1:5173/ | head -n 5
 - `Acceptance Criteria`: Agent Mode가 만든 AC와 테스트 후보
 - `Coding Agent PR`: 좁은 이슈를 위임해 만든 PR 형태
 - `Failed Tests`: retry 테스트 실패와 required checks 차단
-- `Harness Gate`: unit, label, CODEOWNERS, secret scan, rollback 조건
-- `Pilot Go/No-Go`: 2주 파일럿 판단 기준
+- `Harness Gate`: unit, owner config, data boundary, observability, forbidden pattern, rollback 조건
+- `Pilot Go/No-Go`: 2주 파일럿 판단 기준과 demo fixture 기반 review p95
 
 ## 스크립트
 
 - `npm run dev`: Vite 개발 서버 실행
 - `npm run demo`: 발표용 host를 `127.0.0.1`로 고정해 Vite 실행
+- `npm run demo:scenario -- --mode buggy`: 중복 차감과 blocked 하네스를 실제 runner로 재현
+- `npm run demo:scenario -- --mode fixed`: idempotent retry와 pass 하네스를 실제 runner로 확인
+- `npm run --silent demo:scenario -- --mode buggy --json`: JSON fallback 출력
+- `npm run harness:strict`: fixed mode strict harness 실행
 - `npm run test`: Vitest 테스트 실행
 - `npm run build`: TypeScript와 Vite 빌드 실행
 - `npm run lint`: ESLint 실행
-- `npm run validate`: 테스트와 빌드를 순서대로 실행
+- `npm run validate`: 테스트, 빌드, fixed strict harness를 순서대로 실행
 
 ## 문제 대응
 

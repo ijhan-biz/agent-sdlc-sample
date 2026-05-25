@@ -1,4 +1,4 @@
-import type { GateResult, PilotMetric } from '../lib/gateEvaluator'
+import type { GateResult } from '../lib/gateEvaluator'
 
 export type StageId = 'bug' | 'ac' | 'pr' | 'tests' | 'harness' | 'pilot'
 
@@ -177,21 +177,32 @@ export const evidenceByStage: Record<StageId, EvidenceItem[]> = {
   ],
 }
 
-export const pilotMetrics: PilotMetric[] = [
-  { id: 'sensitive-data', label: '금지 데이터 입력', value: '0건', status: 'pass' },
-  { id: 'ai-label', label: 'AI PR 라벨링', value: '100%', status: 'pass' },
-  { id: 'checks', label: 'Required checks', value: '100%', status: 'pass' },
-  { id: 'review-p95', label: '리뷰 대기 p95', value: '0.8일', status: 'pass' },
-]
-
-export const blockedPilotMetrics: PilotMetric[] = [
-  ...pilotMetrics.slice(0, 2),
-  { id: 'checks', label: 'Required checks', value: 'retry test failing', status: 'fail' },
-  pilotMetrics[3],
-]
-
 export const sampleFailingGates: GateResult[] = [
-  { id: 'unit', label: 'Affected unit tests', status: 'fail', detail: 'coupon.retry.idempotent failed' },
-  { id: 'label', label: 'AI PR label', status: 'pass', detail: 'ai-assisted label attached' },
-  { id: 'secret', label: 'Secret scan', status: 'pass', detail: 'no secret or customer data found' },
+  {
+    id: 'coupon-idempotency',
+    label: 'Affected unit tests',
+    status: 'fail',
+    source: 'runner',
+    observed: 'balanceDelta=-2; duplicateChargeDetected=true; reusedResult=false',
+    expected: 'balanceDelta=-1; duplicateChargeDetected=false; reusedResult=true',
+    detail: 'coupon.retry.idempotent failed',
+  },
+  {
+    id: 'owner-coverage',
+    label: 'Owner coverage',
+    status: 'pass',
+    source: 'config/owners.json',
+    observed: 'coupon-service-owner',
+    expected: 'coupon-redeem owner with reviewRequired=true',
+    detail: 'owner review is mapped',
+  },
+  {
+    id: 'forbidden-patterns',
+    label: 'Forbidden patterns',
+    status: 'pass',
+    source: 'config/harness.json forbiddenPatterns',
+    observed: '0 hits',
+    expected: '0 hits in demo artifacts',
+    detail: 'no secret or customer data found',
+  },
 ]

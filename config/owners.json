@@ -1,0 +1,15 @@
+{
+  "services": [
+    {
+      "id": "coupon-redeem",
+      "owner": "coupon-service-owner",
+      "reviewRequired": true,
+      "paths": [
+        "src/domain/coupon.ts",
+        "src/lib/gateEvaluator.ts",
+        "config/harness.json",
+        "config/observability.json"
+      ]
+    }
+  ]
+}
