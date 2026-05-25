@@ -16,6 +16,145 @@ npm run demo -- --port 5173
 
 브라우저에서 `http://127.0.0.1:5173/`을 열고 전체 화면으로 띄웁니다. 발표 중에는 왼쪽 타임라인 또는 상단 버튼으로 단계를 이동합니다.
 
+GitHub에서 새로 받을 때는 아래처럼 시작합니다.
+
+```bash
+git clone https://github.com/ijhan-biz/agent-sdlc-sample.git
+cd agent-sdlc-sample
+npm install
+npm run demo -- --port 5173
+```
+
+macOS에서는 서버를 띄운 뒤 별도 터미널에서 바로 열 수 있습니다.
+
+```bash
+open http://127.0.0.1:5173/
+```
+
+## Coupon API Bug 보는 법
+
+이 저장소의 `Coupon API Bug`는 실제 백엔드 API 서버가 아니라 발표용 React 데모 안에 들어 있는 시나리오입니다. 즉, `/api/coupons/redeem` 엔드포인트를 실제로 서비스하는 서버가 없으므로 터미널에 `POST /api/coupons/redeem`를 그대로 입력하거나 `curl -X POST http://127.0.0.1:5173/api/coupons/redeem`를 실행해 버그를 재현하는 구조가 아닙니다.
+
+데모에서 보여주는 버그는 다음 상황입니다.
+
+- 모바일 클라이언트가 2초 retry window 안에서 같은 요청을 다시 보냅니다.
+- 요청은 같은 `couponId`, `memberId`, `idempotencyKey`를 사용합니다.
+- 기대 동작은 같은 `idempotencyKey`의 재시도 요청이 최초 처리 결과를 그대로 반환하고 쿠폰을 다시 차감하지 않는 것입니다.
+- 버그 상태에서는 재시도 요청이 중복 처리되어 쿠폰 잔액이 두 번 차감됩니다.
+
+화면에서 보여줄 재현 요청은 아래 더미 데이터입니다.
+
+```http
+POST /api/coupons/redeem
+{
+  "couponId": "SPRING-20",
+  "memberId": "demo-user-42",
+  "idempotencyKey": "order-8842-retry-1"
+}
+```
+
+버그를 보는 정확한 순서는 다음과 같습니다.
+
+1. 서버를 실행합니다.
+
+	```bash
+	cd /Users/hacbook/ms/workspace/agent-sdlc-sample
+	npm run demo -- --port 5173
+	```
+
+2. 브라우저에서 데모를 엽니다.
+
+	```bash
+	open http://127.0.0.1:5173/
+	```
+
+3. 상단의 `리셋`을 눌러 초기 상태로 맞춥니다.
+
+4. 왼쪽 타임라인의 `1. Coupon API Bug`를 엽니다.
+	- `Endpoint`: `POST /api/coupons/redeem`
+	- `Signal`: `retry window 2s 안에서 동일 idempotencyKey 요청이 중복 처리됨`
+	- `Reproduction request`: 위의 `SPRING-20`, `demo-user-42`, `order-8842-retry-1` 요청
+
+5. 왼쪽 타임라인의 `4. Failed Tests`로 이동합니다.
+	- 상단 상태 요약의 `테스트 상태`가 `retry test failing`인지 확인합니다.
+	- `하네스`가 `blocked`인지 확인합니다.
+	- `파일럿`이 `No-Go`인지 확인합니다.
+	- 중앙의 `Vitest output`에 아래 메시지가 보이는지 확인합니다.
+
+	```text
+	FAIL coupon.retry.idempotent
+	Expected coupon balance to decrement once
+	Received balance delta: -2
+
+	Assertion:
+	expect(redemptions).toHaveLength(1)
+	received 2 redemption records
+	```
+
+이 장면이 발표에서 말하는 `Coupon API Bug`입니다. 핵심은 “AI가 만든 PR이 실패했다”가 아니라, retry 중복 차감이라는 위험이 테스트와 하네스에 의해 눈에 보이게 차단된다는 점입니다.
+
+## 정확히 보여줄 커맨드와 변화
+
+발표 중 터미널에서 실행할 커맨드는 세 종류만 사용하면 됩니다.
+
+### 1. 데모 앱 실행
+
+```bash
+cd /Users/hacbook/ms/workspace/agent-sdlc-sample
+npm install
+npm run demo -- --port 5173
+```
+
+보여줄 변화는 브라우저에서 만듭니다.
+
+| 순서 | 조작 | 보여줄 변화 |
+| --- | --- | --- |
+| 1 | `리셋` 클릭 | `테스트 상태: retry test failing`, `하네스: blocked`, `파일럿: No-Go` |
+| 2 | `Coupon API Bug` 클릭 | endpoint, retry signal, reproduction request 확인 |
+| 3 | `Failed Tests` 클릭 | `Received balance delta: -2`, `received 2 redemption records` 확인 |
+| 4 | `최소 패치 적용` 클릭 | `테스트 상태`가 `retry tests pass`로 변경 |
+| 5 | `Harness Gate` 클릭 | `Affected unit tests`가 `PASS`로 변경되고 하네스가 `pass`로 변경 |
+| 6 | `Pilot Go/No-Go` 클릭 | Decision이 `Go`로 변경 |
+
+`최소 패치 적용` 버튼은 실제 파일을 수정하는 버튼이 아니라 데모 상태를 `patchApplied=false`에서 `patchApplied=true`로 바꾸는 발표용 토글입니다. 이 토글을 통해 “패치 전에는 required checks가 막고, 패치 후에는 하네스와 파일럿 판단이 바뀐다”는 전이를 보여줍니다.
+
+### 2. 데모 서버 확인
+
+별도 터미널에서 아래 명령으로 Vite 서버가 떠 있는지만 확인할 수 있습니다.
+
+```bash
+curl -sSf http://127.0.0.1:5173/ | head -n 5
+```
+
+이 명령은 데모 앱의 HTML이 응답하는지 확인하는 용도입니다. Coupon API 자체를 호출하는 명령이 아닙니다.
+
+### 3. 테스트와 하네스 상태 확인
+
+아래 명령은 데모의 상태 전이 로직이 기대대로 구성되어 있는지 확인합니다.
+
+```bash
+npm run test -- --reporter verbose
+```
+
+정상이라면 아래 테스트가 모두 통과합니다.
+
+```text
+✓ blocks the harness before the minimal patch is applied
+✓ passes the harness after the minimal patch is applied
+✓ returns No-Go when required checks fail
+✓ returns Go when all pilot metrics pass
+```
+
+여기서 `blocks the harness before the minimal patch is applied`는 패치 전 상태가 안전하게 막히는지 확인합니다. `passes the harness after the minimal patch is applied`는 패치 후 상태가 통과로 바뀌는지 확인합니다.
+
+전체 검증은 아래 명령으로 실행합니다.
+
+```bash
+npm run validate
+```
+
+`npm run validate`는 `npm run test`와 `npm run build`를 순서대로 실행합니다. 발표 전에는 이 명령이 통과하는지 먼저 확인하고, 발표 중에는 브라우저에서 `리셋` -> `Failed Tests` -> `최소 패치 적용` -> `Harness Gate` 순서로 전후 변화를 보여주는 것이 가장 안정적입니다.
+
 ## 발표 전 점검
 
 발표 전에 한 번 실행해 두면 좋습니다.
