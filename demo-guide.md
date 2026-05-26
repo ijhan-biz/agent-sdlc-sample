@@ -32,7 +32,7 @@ npm run demo:scenario -- --mode buggy
    - 좋은 PR은 좋은 질문에서 시작한다고 말합니다.
 
 3. Slides 10-13 · `GitHub Codegen Pipeline`
-   - Issue comment, `ai-ready` 라벨, Assign to Copilot, generated PR, required checks 연결선을 보여줍니다.
+   - 실제 GitHub Issue #1, 실패 PR #2, failed Actions run 연결선을 보여줍니다.
    - `.github/ISSUE_TEMPLATE`, PR template, CI workflow, CODEOWNERS가 화면의 artifact로 연결된다고 설명합니다.
 
 4. Slide 13 · `Coding Agent PR`
@@ -60,15 +60,21 @@ npm run demo:scenario -- --mode buggy
 
 화면의 `GitHub Codegen Pipeline` 단계에서 아래 순서를 짚습니다.
 
+실제 GitHub 화면:
+
+- Issue #1: https://github.com/ijhan-biz/agent-sdlc-sample/issues/1
+- Failing PR #2: https://github.com/ijhan-biz/agent-sdlc-sample/pull/2
+- Failed Actions run: https://github.com/ijhan-biz/agent-sdlc-sample/actions/runs/26452802428
+- Failed check log: https://github.com/ijhan-biz/agent-sdlc-sample/actions/runs/26452802428/job/77878116194
+
 ```bash
-gh issue create --title "Bug: coupon double redemption on retry" --label bug,ai-candidate --body-file .github/ISSUE_TEMPLATE/copilot-codegen-task.yml
-gh issue comment 128 --body-file ac.md
-gh issue edit 128 --add-label ai-plan,ai-ready
-gh pr checks 42 --watch
-gh run view --log-failed
+gh issue view 1 --web
+gh pr view 2 --web
+gh pr checks 2
+gh run view 26452802428 --log-failed
 ```
 
-GitHub UI에서는 `Issues -> Assignees -> Copilot`을 선택하는 장면으로 설명합니다. 실제 자동생성 산출물은 `.github/pull_request_template.md`, `.github/workflows/ci.yml`, `.github/CODEOWNERS`가 required checks와 owner review를 표현합니다.
+GitHub UI에서는 `Issues -> Assignees -> Copilot`을 선택하는 장면으로 설명합니다. 실제 자동생성 산출물은 `.github/pull_request_template.md`, `.github/workflows/ci.yml`, `.github/CODEOWNERS`가 required checks와 owner review를 표현합니다. PR #2는 데모용으로 실패 상태를 유지해야 하므로 merge하지 않습니다.
 
 ## 3. 터미널 런북
 

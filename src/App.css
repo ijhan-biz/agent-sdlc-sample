@@ -361,6 +361,21 @@ button.ghost {
   line-height: 1.25;
 }
 
+.repo-link {
+  display: inline-flex;
+  color: #f8fafc;
+  font-size: 1.15rem;
+  font-weight: 900;
+  line-height: 1.25;
+  text-decoration: none;
+}
+
+.repo-link:hover,
+.pipeline-link:hover,
+.github-live-card:hover {
+  text-decoration: underline;
+}
+
 .github-summary-panel p {
   margin-top: 8px;
   color: #dbeafe;
@@ -381,6 +396,58 @@ button.ghost {
   font-size: 0.8rem;
   font-weight: 850;
   padding: 5px 9px;
+}
+
+.github-live-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.github-live-card {
+  display: block;
+  min-height: 150px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.58);
+  color: inherit;
+  padding: 14px;
+  text-decoration: none;
+}
+
+.github-live-card span {
+  display: inline-flex;
+  border-radius: 999px;
+  background: rgba(255, 143, 131, 0.16);
+  color: #ffb4ac;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1.2;
+  padding: 5px 8px;
+}
+
+.github-live-card strong {
+  display: block;
+  margin-top: 10px;
+  color: #f8fafc;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.github-live-card p {
+  margin-top: 7px;
+  color: #dbeafe;
+  font-size: 0.88rem;
+  line-height: 1.42;
+}
+
+.github-live-card em {
+  display: block;
+  margin-top: 9px;
+  color: #b8fff0;
+  font-size: 0.78rem;
+  font-style: normal;
+  line-height: 1.35;
 }
 
 .pipeline-flow {
@@ -450,6 +517,17 @@ button.ghost {
   font: 0.78rem/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   overflow-wrap: anywhere;
   padding: 8px;
+}
+
+.pipeline-link {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  margin-top: 8px;
+  color: #7dd3fc;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-decoration: none;
 }
 
 .pipeline-body dl {
@@ -634,6 +712,7 @@ button.ghost {
   .live-status-panel,
   .live-status-grid,
   .github-summary-panel,
+  .github-live-grid,
   .pipeline-flow {
     grid-template-columns: 1fr;
   }

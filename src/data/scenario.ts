@@ -29,6 +29,16 @@ export interface GitHubPipelineStep {
   detail: string
   artifact: string
   gate: string
+  url: string
+}
+
+export interface GitHubLiveArtifact {
+  id: string
+  title: string
+  status: string
+  url: string
+  detail: string
+  evidence: string
 }
 
 export const stages: DemoStage[] = [
@@ -99,13 +109,30 @@ export const stages: DemoStage[] = [
 
 export const githubAutomation = {
   repository: 'github.com/ijhan-biz/agent-sdlc-sample',
-  issueNumber: 128,
-  issueTitle: 'Bug: coupon double redemption on retry',
-  labels: ['bug', 'ai-candidate', 'ai-plan', 'ai-ready'],
+  repositoryUrl: 'https://github.com/ijhan-biz/agent-sdlc-sample',
+  issueNumber: 1,
+  issueTitle: 'Demo: coupon double redemption on retry',
+  issueUrl: 'https://github.com/ijhan-biz/agent-sdlc-sample/issues/1',
+  issueCommentUrl: 'https://github.com/ijhan-biz/agent-sdlc-sample/issues/1#issuecomment-4544785558',
+  issueState: 'OPEN',
+  labels: ['bug', 'ai-candidate', 'ai-ready'],
   assignee: 'Copilot',
-  branch: 'copilot/fix-coupon-idempotency',
-  pullRequestNumber: 42,
+  branch: 'demo/failing-copilot-pr-issue-1',
+  pullRequestNumber: 2,
+  pullRequestTitle: 'Demo: failing Copilot coupon idempotency PR',
+  pullRequestUrl: 'https://github.com/ijhan-biz/agent-sdlc-sample/pull/2',
+  pullRequestState: 'OPEN',
+  pullRequestMergeState: 'UNSTABLE',
+  pullRequestLabels: ['ai-assisted'],
   workflow: 'Agentic SDLC CI',
+  actionsRunId: 26452802428,
+  actionsRunUrl: 'https://github.com/ijhan-biz/agent-sdlc-sample/actions/runs/26452802428',
+  checkRunName: 'Required checks',
+  checkRunStatus: 'COMPLETED',
+  checkRunConclusion: 'FAILURE',
+  checkRunUrl: 'https://github.com/ijhan-biz/agent-sdlc-sample/actions/runs/26452802428/job/77878116194',
+  failedStep: 'Test',
+  failureSummary: 'src/domain/coupon.test.ts receives balanceDelta=-2 instead of -1',
   artifacts: [
     '.github/ISSUE_TEMPLATE/copilot-codegen-task.yml',
     '.github/pull_request_template.md',
@@ -113,6 +140,41 @@ export const githubAutomation = {
     '.github/CODEOWNERS',
   ],
 }
+
+export const githubLiveArtifacts: GitHubLiveArtifact[] = [
+  {
+    id: 'github-issue-1',
+    title: 'Issue #1',
+    status: 'OPEN',
+    url: githubAutomation.issueUrl,
+    detail: githubAutomation.issueTitle,
+    evidence: 'labels: bug, ai-candidate, ai-ready',
+  },
+  {
+    id: 'github-pr-2',
+    title: 'PR #2',
+    status: 'OPEN / UNSTABLE',
+    url: githubAutomation.pullRequestUrl,
+    detail: githubAutomation.pullRequestTitle,
+    evidence: `head: ${githubAutomation.branch}; label: ai-assisted`,
+  },
+  {
+    id: 'github-run-26452802428',
+    title: 'Actions run',
+    status: 'FAILURE',
+    url: githubAutomation.actionsRunUrl,
+    detail: `${githubAutomation.workflow} #${githubAutomation.actionsRunId}`,
+    evidence: `${githubAutomation.checkRunName} failed at ${githubAutomation.failedStep}`,
+  },
+  {
+    id: 'github-check-log',
+    title: 'Failed check log',
+    status: 'FAILURE',
+    url: githubAutomation.checkRunUrl,
+    detail: githubAutomation.failureSummary,
+    evidence: 'expected -2 to be -1; required checks block merge',
+  },
+]
 
 export const githubPipeline: GitHubPipelineStep[] = [
   {
@@ -124,16 +186,18 @@ export const githubPipeline: GitHubPipelineStep[] = [
     detail: '모호한 중복 차감 리포트를 endpoint, AC, test id, 데이터 경계가 있는 작업 계약으로 바꾼다.',
     artifact: '.github/ISSUE_TEMPLATE/copilot-codegen-task.yml',
     gate: 'ai-candidate label',
+    url: githubAutomation.issueUrl,
   },
   {
     id: 'agent-plan',
     title: 'AC comment',
     surface: 'Issue comment',
     actor: 'VS Code Copilot Agent',
-    command: 'gh issue comment 128 --body-file ac.md',
+    command: 'gh issue comment 1 --body-file ac.md',
     detail: '코드 수정 전에 재현 질문, Acceptance Criteria, 영향 파일, 테스트 후보를 이슈에 남긴다.',
     artifact: 'src/data/scenario.ts',
     gate: 'ai-plan label',
+    url: githubAutomation.issueCommentUrl,
   },
   {
     id: 'copilot-assign',
@@ -144,36 +208,40 @@ export const githubPipeline: GitHubPipelineStep[] = [
     detail: 'AC가 명확해진 뒤 idempotencyKey 처리만 작은 비동기 코드 생성 작업으로 위임한다.',
     artifact: '.github/ISSUE_TEMPLATE/copilot-codegen-task.yml',
     gate: 'ai-ready label',
+    url: githubAutomation.issueUrl,
   },
   {
     id: 'generated-pr',
     title: 'Generated PR',
     surface: 'Pull requests',
     actor: 'Copilot coding agent',
-    command: 'gh pr view 42 --web',
-    detail: 'branch, changed files, PR body, rollback note가 생성되고 사람 리뷰 큐로 들어간다.',
+    command: 'gh pr view 2 --web',
+    detail: '데모 PR이 생성되고 사람 리뷰 큐로 들어가지만, 의도적으로 실패한 테스트 때문에 merge가 막힌다.',
     artifact: '.github/pull_request_template.md',
     gate: 'ai-assisted label',
+    url: githubAutomation.pullRequestUrl,
   },
   {
     id: 'checks',
     title: 'Required checks',
     surface: 'GitHub Actions',
     actor: 'CI harness',
-    command: 'gh pr checks 42 --watch',
-    detail: 'test, build, strict harness가 실행되고 실패하면 merge 버튼이 잠긴다.',
+    command: 'gh pr checks 2',
+    detail: '실제 Actions run에서 Test step이 실패했고, Required checks가 FAILURE로 완료됐다.',
     artifact: '.github/workflows/ci.yml',
     gate: 'required status checks',
+    url: githubAutomation.actionsRunUrl,
   },
   {
     id: 'merge-gate',
     title: 'Review gate',
     surface: 'Rulesets + CODEOWNERS',
     actor: 'Owner reviewer',
-    command: 'gh pr edit 42 --add-label ai-assisted',
-    detail: 'CODEOWNERS 승인, 금지 데이터, rollback 조건이 충족되어야 squash merge로 갈 수 있다.',
+    command: 'gh run view 26452802428 --log-failed',
+    detail: 'PR은 OPEN / UNSTABLE 상태로 남아 데모에서 merge blocked 화면과 실패 로그를 보여준다.',
     artifact: '.github/CODEOWNERS',
     gate: 'owner approval',
+    url: githubAutomation.checkRunUrl,
   },
 ]
 
@@ -217,16 +285,20 @@ export const acceptanceCriteria = [
 ]
 
 export const pullRequest = {
-  title: 'fix(coupon): guard duplicate redemption by idempotency key',
-  summary: '쿠폰 차감 전 idempotency store를 조회하고, retry 요청은 최초 처리 결과를 반환하도록 좁은 변경을 만든다.',
-  files: ['src/coupon/redeem.ts', 'src/coupon/idempotency-store.ts', 'src/coupon/redeem.test.ts'],
+  title: githubAutomation.pullRequestTitle,
+  summary: 'GitHub에 실제로 열린 PR #2는 idempotency cache key를 잘못 바꾼 데모 변경으로, Required checks 실패와 merge block을 보여준다.',
+  files: ['src/domain/coupon.ts', 'src/domain/coupon.test.ts', 'src/lib/gateEvaluator.test.ts'],
   body: `## AI-assisted change
-- [x] AC and tests linked
-- [x] no prod logs / customer data / secrets used
-- [x] rollback condition noted
+- [x] Related issue: #${githubAutomation.issueNumber}
+- [x] Label: ai-assisted
+- [x] Required checks attached
+- [x] Failure is intentional for seminar demo
 
-Risk: retry path may still double-decrement if store lookup happens after balance update.
-Required checks: unit, contract, secret scan, CODEOWNERS`,
+Expected failure:
+- ${githubAutomation.failureSummary}
+- ${githubAutomation.checkRunName}: ${githubAutomation.checkRunConclusion}
+
+Do not merge this PR. Use it to show failed checks and harness gate behavior.`,
 }
 
 export const testResults = {
@@ -262,13 +334,13 @@ export const evidenceByStage: Record<StageId, EvidenceItem[]> = {
     { id: 'DATA-RULE', title: 'Data boundary', detail: '더미 데이터만 사용. 운영 로그와 고객 정보 제외.' },
   ],
   github: [
-    { id: 'GH-ISSUE', title: 'Issue contract', detail: 'GitHub Issue에 AC, labels, test id, 데이터 경계를 남긴다.' },
-    { id: 'GH-COPILOT', title: 'Assign to Copilot', detail: 'ai-ready가 된 작은 범위만 Copilot coding agent에 위임한다.' },
-    { id: 'GH-ACTIONS', title: 'Required checks', detail: 'CI와 Rulesets가 생성 PR의 merge 가능 여부를 결정한다.' },
+    { id: 'GH-ISSUE-1', title: 'Live Issue #1', detail: 'GitHub Issue에 AC, labels, test id, 데이터 경계를 남겼다.' },
+    { id: 'GH-PR-2', title: 'Live PR #2', detail: '실패하는 데모 PR이 OPEN / UNSTABLE 상태로 올라가 있다.' },
+    { id: 'GH-ACTIONS', title: 'Failed Actions run', detail: 'Required checks가 FAILURE로 완료되어 merge를 막는다.' },
   ],
   pr: [
-    { id: 'PR-42', title: 'Coding Agent PR', detail: '작은 계약으로 위임된 idempotency fix.' },
-    { id: 'OWNER', title: 'CODEOWNERS', detail: 'coupon service owner review required.' },
+    { id: 'PR-2', title: 'Failing GitHub PR', detail: '실제 GitHub PR #2가 실패 체크와 함께 열려 있다.' },
+    { id: 'CHECK-RUN', title: 'Required checks', detail: 'Actions run 26452802428의 Test step이 실패했다.' },
   ],
   tests: [
     { id: 'VT-01', title: 'Vitest run', detail: 'retry idempotency case fails before patch.' },

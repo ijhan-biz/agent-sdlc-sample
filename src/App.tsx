@@ -5,6 +5,7 @@ import {
   couponBug,
   evidenceByStage,
   githubAutomation,
+  githubLiveArtifacts,
   githubPipeline,
   type GitHubPipelineStepId,
   pullRequest,
@@ -31,9 +32,9 @@ function App() {
   const liveStatusItems: LiveStatusItem[] = [
     {
       label: 'GitHub PR',
-      value: `#${githubAutomation.pullRequestNumber} generated`,
-      detail: `${githubAutomation.assignee} assigned from Issue #${githubAutomation.issueNumber}`,
-      tone: 'blue',
+      value: `#${githubAutomation.pullRequestNumber} ${githubAutomation.checkRunConclusion}`,
+      detail: `Issue #${githubAutomation.issueNumber} -> PR #${githubAutomation.pullRequestNumber} -> ${githubAutomation.failedStep} failed`,
+      tone: 'red',
       stageId: 'github',
       actionLabel: 'GitHub Pipeline 보기',
     },
@@ -319,22 +320,35 @@ function renderGitHubPipeline(scenarioReport: CouponScenarioReport) {
       <div className="github-summary-panel" aria-label="GitHub 연결 요약">
         <div>
           <span className="eyebrow">Repository</span>
-          <strong>{githubAutomation.repository}</strong>
-          <p>Issue #{githubAutomation.issueNumber}에서 Copilot을 할당하고 PR #{githubAutomation.pullRequestNumber}의 required checks로 merge를 제어합니다.</p>
+          <a className="repo-link" href={githubAutomation.repositoryUrl} target="_blank" rel="noreferrer">
+            {githubAutomation.repository}
+          </a>
+          <p>Issue #{githubAutomation.issueNumber}와 PR #{githubAutomation.pullRequestNumber}가 실제 GitHub 저장소에 올라가 있고, Actions run #{githubAutomation.actionsRunId}가 실패 상태로 merge를 막습니다.</p>
         </div>
         <div>
           <span className="eyebrow">Labels</span>
           <div className="label-cloud">
-            {githubAutomation.labels.map((label) => (
+            {[...githubAutomation.labels, ...githubAutomation.pullRequestLabels].map((label) => (
               <span key={label}>{label}</span>
             ))}
           </div>
         </div>
       </div>
 
+      <div className="github-live-grid" aria-label="GitHub 실제 산출물">
+        {githubLiveArtifacts.map((artifact) => (
+          <a className="github-live-card" href={artifact.url} target="_blank" rel="noreferrer" key={artifact.id}>
+            <span>{artifact.status}</span>
+            <strong>{artifact.title}</strong>
+            <p>{artifact.detail}</p>
+            <em>{artifact.evidence}</em>
+          </a>
+        ))}
+      </div>
+
       <div className="pipeline-flow" aria-label="GitHub 코드 자동생성 파이프라인">
         {githubPipeline.map((step, index) => {
-          const status = getPipelineStepState(step.id, scenarioReport)
+          const status = getPipelineStepState(step.id)
 
           return (
             <article className={`pipeline-step ${status.tone}`} key={step.id}>
@@ -344,6 +358,9 @@ function renderGitHubPipeline(scenarioReport: CouponScenarioReport) {
                 <h3>{step.title}</h3>
                 <p>{step.detail}</p>
                 <code className="pipeline-command">{step.command}</code>
+                <a className="pipeline-link" href={step.url} target="_blank" rel="noreferrer">
+                  GitHub에서 보기
+                </a>
                 <dl>
                   <dt>Actor</dt>
                   <dd>{step.actor}</dd>
@@ -374,21 +391,17 @@ function renderGitHubPipeline(scenarioReport: CouponScenarioReport) {
   )
 }
 
-function getPipelineStepState(stepId: GitHubPipelineStepId, report: CouponScenarioReport) {
+function getPipelineStepState(stepId: GitHubPipelineStepId) {
   if (stepId === 'checks') {
-    return report.summary.blocked
-      ? { label: `${report.summary.failed} required check(s) blocked`, tone: 'red' as const }
-      : { label: 'required checks pass', tone: 'green' as const }
+    return { label: `${githubAutomation.checkRunName}: ${githubAutomation.checkRunConclusion}`, tone: 'red' as const }
   }
 
   if (stepId === 'merge-gate') {
-    return report.pilotDecision.decision === 'Go'
-      ? { label: 'owner review ready', tone: 'green' as const }
-      : { label: 'merge held by gate', tone: 'yellow' as const }
+    return { label: `merge state: ${githubAutomation.pullRequestMergeState}`, tone: 'yellow' as const }
   }
 
   if (stepId === 'generated-pr') {
-    return { label: `PR #${githubAutomation.pullRequestNumber} generated`, tone: 'purple' as const }
+    return { label: `PR #${githubAutomation.pullRequestNumber} ${githubAutomation.pullRequestState}`, tone: 'purple' as const }
   }
 
   return { label: 'ready for handoff', tone: 'blue' as const }
@@ -443,16 +456,19 @@ function formatGitHubAutomationScript(report: CouponScenarioReport) {
   --body-file .github/ISSUE_TEMPLATE/copilot-codegen-task.yml
 
 gh issue comment ${githubAutomation.issueNumber} --body-file ac.md
-gh issue edit ${githubAutomation.issueNumber} --add-label ai-plan,ai-ready
+gh issue view ${githubAutomation.issueNumber} --web
 
 # GitHub UI: Issues -> Assignees -> ${githubAutomation.assignee}
 gh pr view ${githubAutomation.pullRequestNumber} --web
-gh pr checks ${githubAutomation.pullRequestNumber} --watch
-gh run view --log-failed
+gh pr checks ${githubAutomation.pullRequestNumber}
+gh run view ${githubAutomation.actionsRunId} --log-failed
 
 Workflow: ${githubAutomation.workflow}
 Branch: ${githubAutomation.branch}
-Harness: ${report.summary.blocked ? 'blocked' : 'pass'} (${report.summary.failed}/${report.summary.total} failing gates)
+GitHub check: ${githubAutomation.checkRunName} ${githubAutomation.checkRunConclusion}
+Failed step: ${githubAutomation.failedStep}
+Failure: ${githubAutomation.failureSummary}
+Local harness: ${report.summary.blocked ? 'blocked' : 'pass'} (${report.summary.failed}/${report.summary.total} failing gates)
 Pilot: ${report.pilotDecision.decision}`
 }
 

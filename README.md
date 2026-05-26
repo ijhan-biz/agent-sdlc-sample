@@ -418,8 +418,8 @@ curl -sSf http://127.0.0.1:5173/ | head -n 5
 | 0 | `리셋` 클릭 | 상태 요약의 failing, blocked, No-Go | “처음 상태는 아직 안전하지 않습니다. 그래서 성공이 아니라 실패와 차단부터 보겠습니다.” |
 | 1 | `Coupon API Bug` | endpoint, signal, reproduction request | “바로 고쳐달라고 하지 않고, 재현 가능한 작업 계약으로 바꿉니다.” |
 | 2 | `Acceptance Criteria` | AC-1~AC-4, 연결된 test id | “Agent Mode의 첫 가치는 코드 생성이 아니라 질문 생성과 AC 정리입니다.” |
-| 3 | `GitHub Codegen Pipeline` | Issue, labels, Assign to Copilot, PR Checks, CODEOWNERS | “코드 자동생성은 GitHub 이슈 계약과 required checks 안에서 움직이게 합니다.” |
-| 4 | `Coding Agent PR` | changed files, PR description, required checks | “Coding Agent에는 큰 문제 전체가 아니라 좁고 검증 가능한 PR 계약만 맡깁니다.” |
+| 3 | `GitHub Codegen Pipeline` | live Issue #1, failing PR #2, failed Actions run, CODEOWNERS | “코드 자동생성은 GitHub 이슈 계약과 required checks 안에서 움직이게 합니다.” |
+| 4 | `Coding Agent PR` | PR #2 body, changed files, FAILURE check | “Coding Agent에는 큰 문제 전체가 아니라 좁고 검증 가능한 PR 계약만 맡깁니다.” |
 | 5 | `Failed Tests` | retry test FAIL 로그, blocked 상태 | “오늘 데모의 핵심은 AI PR이 실패하는 순간입니다. 하네스는 이 실패를 숨기지 않고 머지를 막습니다.” |
 | 6 | `최소 패치 적용` | 버튼 클릭 후 상태 변화 | “실패 로그를 다음 입력으로 바꿔 최소 패치만 적용합니다.” |
 | 7 | `Harness Gate` | unit, owner config, data boundary, observability, rollback PASS | “PASS는 AI를 믿는다는 뜻이 아니라, 구조 검증을 통과했다는 뜻입니다.” |
@@ -449,10 +449,10 @@ curl -sSf http://127.0.0.1:5173/ | head -n 5
 
 | Slides | Demo stage | 발표 중 조작 | 설명 포인트 |
 | --- | --- | --- | --- |
-| 4-9 | `Coupon API Bug` | 버그를 바로 고치지 않고 endpoint, signal, reproduction request를 보여줍니다. | 모호한 이슈를 재현 가능한 작업 계약으로 바꿉니다. |
+| 4-8 | `Coupon API Bug` | 버그를 바로 고치지 않고 endpoint, signal, reproduction request를 보여줍니다. | 모호한 이슈를 재현 가능한 작업 계약으로 바꿉니다. |
 | 9 | `Acceptance Criteria` | AC와 test id가 코드보다 먼저 정리되는 장면을 보여줍니다. | Agent Mode의 첫 가치는 코드 생성이 아니라 질문 생성과 AC 정리입니다. |
-| 10-13 | `GitHub Codegen Pipeline` | Issue, Assign to Copilot, generated PR, PR Checks 흐름을 보여줍니다. | 코드 자동생성은 GitHub 라벨, 템플릿, required checks 안에서 실행됩니다. |
-| 13 | `Coding Agent PR` | changed files와 PR description을 보여줍니다. | Coding Agent에는 큰 문제 전체가 아니라 좁고 검증 가능한 PR 계약만 맡깁니다. |
+| 10-13 | `GitHub Codegen Pipeline` | 실제 Issue #1, PR #2, failed Actions run을 엽니다. | 코드 자동생성은 GitHub 라벨, 템플릿, required checks 안에서 실행됩니다. |
+| 13 | `Coding Agent PR` | PR #2의 changed file과 FAILURE check를 보여줍니다. | Coding Agent에는 큰 문제 전체가 아니라 좁고 검증 가능한 PR 계약만 맡깁니다. |
 | 14-15 | `Failed Tests` | FAIL 로그와 blocked 상태를 먼저 보여주고, 아직 패치 버튼은 누르지 않습니다. | AI PR이 실패하고 required checks가 머지를 막는 장면이 핵심입니다. |
 | 16-18 | `Harness Gate` | `최소 패치 적용`을 누른 뒤 PASS 전환과 evidence를 보여줍니다. | 실패 로그를 다음 입력으로 바꾸고 하네스가 구조 검증을 수행합니다. |
 | 19-21 | `Pilot Go/No-Go` | 패치 전 No-Go와 패치 후 Go 판단 기준을 연결합니다. | 확산 판단은 기능표가 아니라 데이터 경계, required checks, 리뷰 p95 같은 운영 기준으로 닫습니다. |
@@ -462,8 +462,8 @@ curl -sSf http://127.0.0.1:5173/ | head -n 5
 1. `리셋`을 눌러 초기 상태를 맞춥니다.
 2. `Coupon API Bug`에서 endpoint, signal, reproduction request를 보여줍니다.
 3. `Acceptance Criteria`에서 AC와 test id를 읽어줍니다.
-4. `GitHub Codegen Pipeline`에서 Issue, Assign to Copilot, generated PR, PR Checks 연결선을 보여줍니다.
-5. `Coding Agent PR`에서 changed files와 PR description을 보여줍니다.
+4. `GitHub Codegen Pipeline`에서 Issue #1, PR #2, failed Actions run 연결선을 보여줍니다.
+5. `Coding Agent PR`에서 PR #2의 changed files와 FAILURE check를 보여줍니다.
 6. `Failed Tests`에서 retry test FAIL과 blocked 상태를 강조합니다.
 7. `최소 패치 적용`을 누릅니다.
 8. `Harness Gate`에서 unit, owner config, data boundary, observability, rollback 조건이 PASS로 바뀌는 것을 보여줍니다.
@@ -505,8 +505,8 @@ curl -sSf http://127.0.0.1:5173/ | head -n 5
 
 - `Coupon API Bug`: 모호한 버그 리포트와 재현 요청
 - `Acceptance Criteria`: Agent Mode가 만든 AC와 테스트 후보
-- `GitHub Codegen Pipeline`: Issue, Assign to Copilot, generated PR, required checks, CODEOWNERS 연결
-- `Coding Agent PR`: 좁은 이슈를 위임해 만든 PR 형태
+- `GitHub Codegen Pipeline`: 실제 Issue #1, PR #2, failed Actions run, required checks, CODEOWNERS 연결
+- `Coding Agent PR`: GitHub에 열린 실패 데모 PR #2와 required checks FAILURE
 - `Failed Tests`: retry 테스트 실패와 required checks 차단
 - `Harness Gate`: unit, owner config, data boundary, observability, forbidden pattern, rollback 조건
 - `Pilot Go/No-Go`: 2주 파일럿 판단 기준과 demo fixture 기반 review p95
@@ -523,6 +523,15 @@ curl -sSf http://127.0.0.1:5173/ | head -n 5
 - `npm run build`: TypeScript와 Vite 빌드 실행
 - `npm run lint`: ESLint 실행
 - `npm run validate`: 테스트, 빌드, fixed strict harness를 순서대로 실행
+
+## Live GitHub Demo Artifacts
+
+- Issue #1: https://github.com/ijhan-biz/agent-sdlc-sample/issues/1
+- Failing PR #2: https://github.com/ijhan-biz/agent-sdlc-sample/pull/2
+- Failed Actions run: https://github.com/ijhan-biz/agent-sdlc-sample/actions/runs/26452802428
+- Failed check log: https://github.com/ijhan-biz/agent-sdlc-sample/actions/runs/26452802428/job/77878116194
+
+PR #2는 세미나 데모를 위해 의도적으로 open/failing 상태로 유지합니다. 데모 시나리오가 더 이상 필요하지 않을 때만 닫거나 수정합니다.
 
 ## 문제 대응
 
