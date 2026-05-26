@@ -4,6 +4,9 @@ import {
   acceptanceCriteria,
   couponBug,
   evidenceByStage,
+  githubAutomation,
+  githubPipeline,
+  type GitHubPipelineStepId,
   pullRequest,
   stages,
   type StageId,
@@ -26,6 +29,14 @@ function App() {
   const testStatus = scenarioReport.couponResult.duplicateChargeDetected ? 'retry test failing' : 'retry tests pass'
   const harnessStatus = gateSummary.blocked ? 'blocked' : 'pass'
   const liveStatusItems: LiveStatusItem[] = [
+    {
+      label: 'GitHub PR',
+      value: `#${githubAutomation.pullRequestNumber} generated`,
+      detail: `${githubAutomation.assignee} assigned from Issue #${githubAutomation.issueNumber}`,
+      tone: 'blue',
+      stageId: 'github',
+      actionLabel: 'GitHub Pipeline 보기',
+    },
     {
       label: '테스트 상태',
       value: testStatus,
@@ -60,6 +71,10 @@ function App() {
   }
 
   const getStageBadge = (stageId: StageId) => {
+    if (stageId === 'github') {
+      return 'READY'
+    }
+
     if (stageId === 'tests') {
       return patchApplied ? 'PASS' : 'FAIL'
     }
@@ -82,10 +97,10 @@ function App() {
           <p className="eyebrow">Agentic SDLC Demo - Coupon API storyline</p>
           <h1>쿠폰 API 버그로 보는 Agentic SDLC</h1>
           <p className="hero-copy">
-            모호한 이슈를 AC로 바꾸고, 작은 PR을 만들고, 실패 테스트와 하네스 게이트를 거쳐
+            모호한 이슈를 AC로 바꾸고, GitHub Issue에서 Copilot 코드 생성 PR을 만들고, 실패 테스트와 하네스 게이트를 거쳐
             파일럿 Go/No-Go까지 이어지는 발표용 데모입니다.
           </p>
-          <p className="demo-url">강의 슬라이드 연결: Slides 4-23 · 실행 URL: http://127.0.0.1:5173/</p>
+          <p className="demo-url">강의 슬라이드 연결: Slides 4-21 · 실행 URL: http://127.0.0.1:5173/</p>
         </div>
         <div className="hero-actions" aria-label="데모 컨트롤">
           <button type="button" onClick={() => setActiveStage(previousStage(activeStage))} disabled={activeIndex === 0}>
@@ -93,6 +108,9 @@ function App() {
           </button>
           <button type="button" onClick={() => setActiveStage(nextStage(activeStage))} disabled={activeIndex === stages.length - 1}>
             다음 단계
+          </button>
+          <button type="button" className="secondary" onClick={() => setActiveStage('github')}>
+            GitHub Pipeline
           </button>
           <button type="button" className="danger" onClick={() => setActiveStage('tests')}>
             Failed Tests 보기
@@ -219,6 +237,10 @@ function renderStage(
     )
   }
 
+  if (activeStage === 'github') {
+    return renderGitHubPipeline(scenarioReport)
+  }
+
   if (activeStage === 'pr') {
     return (
       <div className="stage-grid two">
@@ -291,6 +313,87 @@ function renderStage(
   )
 }
 
+function renderGitHubPipeline(scenarioReport: CouponScenarioReport) {
+  return (
+    <div className="github-stage">
+      <div className="github-summary-panel" aria-label="GitHub 연결 요약">
+        <div>
+          <span className="eyebrow">Repository</span>
+          <strong>{githubAutomation.repository}</strong>
+          <p>Issue #{githubAutomation.issueNumber}에서 Copilot을 할당하고 PR #{githubAutomation.pullRequestNumber}의 required checks로 merge를 제어합니다.</p>
+        </div>
+        <div>
+          <span className="eyebrow">Labels</span>
+          <div className="label-cloud">
+            {githubAutomation.labels.map((label) => (
+              <span key={label}>{label}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="pipeline-flow" aria-label="GitHub 코드 자동생성 파이프라인">
+        {githubPipeline.map((step, index) => {
+          const status = getPipelineStepState(step.id, scenarioReport)
+
+          return (
+            <article className={`pipeline-step ${status.tone}`} key={step.id}>
+              <div className="pipeline-node">{index + 1}</div>
+              <div className="pipeline-body">
+                <span>{step.surface}</span>
+                <h3>{step.title}</h3>
+                <p>{step.detail}</p>
+                <code className="pipeline-command">{step.command}</code>
+                <dl>
+                  <dt>Actor</dt>
+                  <dd>{step.actor}</dd>
+                  <dt>Gate</dt>
+                  <dd>{step.gate}</dd>
+                  <dt>Artifact</dt>
+                  <dd>{step.artifact}</dd>
+                </dl>
+                <strong>{status.label}</strong>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+
+      <div className="stage-grid two">
+        <CodeBlock title="GitHub handoff script" code={formatGitHubAutomationScript(scenarioReport)} />
+        <InfoCard title="Repository artifacts" tone="blue">
+          <p>화면의 파이프라인은 저장소의 GitHub 산출물과 연결됩니다.</p>
+          <ul className="artifact-list">
+            {githubAutomation.artifacts.map((artifact) => (
+              <li key={artifact}>{artifact}</li>
+            ))}
+          </ul>
+        </InfoCard>
+      </div>
+    </div>
+  )
+}
+
+function getPipelineStepState(stepId: GitHubPipelineStepId, report: CouponScenarioReport) {
+  if (stepId === 'checks') {
+    return report.summary.blocked
+      ? { label: `${report.summary.failed} required check(s) blocked`, tone: 'red' as const }
+      : { label: 'required checks pass', tone: 'green' as const }
+  }
+
+  if (stepId === 'merge-gate') {
+    return report.pilotDecision.decision === 'Go'
+      ? { label: 'owner review ready', tone: 'green' as const }
+      : { label: 'merge held by gate', tone: 'yellow' as const }
+  }
+
+  if (stepId === 'generated-pr') {
+    return { label: `PR #${githubAutomation.pullRequestNumber} generated`, tone: 'purple' as const }
+  }
+
+  return { label: 'ready for handoff', tone: 'blue' as const }
+}
+
 function formatRequestBlock(report: CouponScenarioReport) {
   return `POST /api/coupons/redeem
 ${JSON.stringify(report.request, null, 2)}`
@@ -330,14 +433,34 @@ Mode: ${report.mode}
 Scope: coupon-api sample repo
 Harness: ${report.summary.blocked ? 'blocked' : 'pass'} (${report.summary.failed}/${report.summary.total} failing gates)
 Go condition: no sensitive data, 100% required checks, review p95 <= 1 day
-Next: repeat Agent Mode -> Coding Agent -> Harness loop for 2 weeks`
+Next: repeat Agent Mode -> GitHub Issue -> Copilot PR -> Harness loop for 2 weeks`
+}
+
+function formatGitHubAutomationScript(report: CouponScenarioReport) {
+  return `gh issue create \\
+  --title "${githubAutomation.issueTitle}" \\
+  --label bug,ai-candidate \\
+  --body-file .github/ISSUE_TEMPLATE/copilot-codegen-task.yml
+
+gh issue comment ${githubAutomation.issueNumber} --body-file ac.md
+gh issue edit ${githubAutomation.issueNumber} --add-label ai-plan,ai-ready
+
+# GitHub UI: Issues -> Assignees -> ${githubAutomation.assignee}
+gh pr view ${githubAutomation.pullRequestNumber} --web
+gh pr checks ${githubAutomation.pullRequestNumber} --watch
+gh run view --log-failed
+
+Workflow: ${githubAutomation.workflow}
+Branch: ${githubAutomation.branch}
+Harness: ${report.summary.blocked ? 'blocked' : 'pass'} (${report.summary.failed}/${report.summary.total} failing gates)
+Pilot: ${report.pilotDecision.decision}`
 }
 
 interface LiveStatusItem {
   label: string
   value: string
   detail: string
-  tone: 'green' | 'red'
+  tone: 'blue' | 'green' | 'yellow' | 'red'
   stageId: StageId
   actionLabel: string
 }

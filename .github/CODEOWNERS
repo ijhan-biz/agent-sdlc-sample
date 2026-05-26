@@ -1,0 +1,7 @@
+# Demo ownership map for the Agentic SDLC GitHub pipeline.
+/src/domain/coupon.ts @coupon-service-owner
+/src/lib/gateEvaluator.ts @coupon-service-owner
+/config/harness.json @coupon-service-owner
+/config/observability.json @coupon-service-owner
+/.github/workflows/ci.yml @platform-engineering
+/.github/pull_request_template.md @platform-engineering

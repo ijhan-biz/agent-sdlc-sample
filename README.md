@@ -1,8 +1,8 @@
 # Agentic SDLC Demo
 
-Agentic SDLC 세미나에서 함께 실행하는 React 기반 발표용 데모입니다. 발표 스토리라인은 `쿠폰 API 버그 -> AC 생성 -> Coding Agent PR -> 실패 테스트 -> Harness Gate -> Pilot Go/No-Go` 순서로 구성되어 있습니다.
+Agentic SDLC 세미나에서 함께 실행하는 React 기반 발표용 데모입니다. 발표 스토리라인은 `쿠폰 API 버그 -> AC 생성 -> GitHub 코드 자동생성 파이프라인 -> Coding Agent PR -> 실패 테스트 -> Harness Gate -> Pilot Go/No-Go` 순서로 구성되어 있습니다.
 
-이 데모는 실제 운영계를 건드리는 라이브 코딩이 아니라, 로컬 in-memory 쿠폰 도메인 runner와 artifact 기반 하네스를 함께 실행하는 발표용 데모입니다. 핵심은 AI가 한 번에 코드를 맞히는 장면이 아니라, AI PR이 실패했을 때 테스트와 하네스가 안전하게 막고, 실패 로그를 다시 입력으로 바꿔 수정하는 장면입니다.
+이 데모는 실제 운영계를 건드리는 라이브 코딩이 아니라, 로컬 in-memory 쿠폰 도메인 runner와 artifact 기반 하네스를 함께 실행하는 발표용 데모입니다. 핵심은 GitHub Issue에서 Copilot coding agent로 작은 코드 생성 PR을 만들고, AI PR이 실패했을 때 테스트와 하네스가 안전하게 막고, 실패 로그를 다시 입력으로 바꿔 수정하는 장면입니다.
 
 ## 빠른 실행
 
@@ -367,7 +367,7 @@ curl -sSf http://127.0.0.1:5173/ | head -n 5
 
 ## 화면 구성
 
-- 상단 컨트롤: `이전`, `다음 단계`, `최소 패치 적용`, `리셋`
+- 상단 컨트롤: `이전`, `다음 단계`, `GitHub Pipeline`, `Failed Tests 보기`, `최소 패치 적용`, `리셋`
 - 왼쪽 타임라인: 강의 슬라이드 범위와 데모 단계
 - 중앙 패널: 현재 단계 설명, 강의와 데모 연결 문장, 실제 데모 화면
 - 오른쪽 Evidence: 해당 단계에서 발표자가 근거로 짚을 산출물
@@ -396,6 +396,7 @@ curl -sSf http://127.0.0.1:5173/ | head -n 5
 | --- | --- | --- |
 | `이전` | 흐름을 되돌릴 때 | 현재 단계의 바로 앞 단계로 이동합니다. 첫 단계에서는 비활성화됩니다. |
 | `다음 단계` | 순서대로 시연할 때 | `Coupon API Bug`부터 `Pilot Go/No-Go`까지 한 단계씩 이동합니다. |
+| `GitHub Pipeline` | GitHub 연동 흐름을 바로 보여줄 때 | Issue, Assign to Copilot, generated PR, required checks, CODEOWNERS 흐름으로 이동합니다. |
 | `최소 패치 적용` | `Failed Tests`를 보여준 직후 | 실패 로그를 바탕으로 최소 패치가 적용된 상태로 전환합니다. 이 버튼을 누른 뒤 Harness와 Pilot 판단이 바뀝니다. |
 | `리셋` | 발표 시작 전, 흐름이 꼬였을 때 | `Coupon API Bug`, failing test, blocked harness, No-Go 상태로 되돌립니다. |
 
@@ -417,29 +418,30 @@ curl -sSf http://127.0.0.1:5173/ | head -n 5
 | 0 | `리셋` 클릭 | 상태 요약의 failing, blocked, No-Go | “처음 상태는 아직 안전하지 않습니다. 그래서 성공이 아니라 실패와 차단부터 보겠습니다.” |
 | 1 | `Coupon API Bug` | endpoint, signal, reproduction request | “바로 고쳐달라고 하지 않고, 재현 가능한 작업 계약으로 바꿉니다.” |
 | 2 | `Acceptance Criteria` | AC-1~AC-4, 연결된 test id | “Agent Mode의 첫 가치는 코드 생성이 아니라 질문 생성과 AC 정리입니다.” |
-| 3 | `Coding Agent PR` | changed files, PR description, required checks | “Coding Agent에는 큰 문제 전체가 아니라 좁고 검증 가능한 PR 계약만 맡깁니다.” |
-| 4 | `Failed Tests` | retry test FAIL 로그, blocked 상태 | “오늘 데모의 핵심은 AI PR이 실패하는 순간입니다. 하네스는 이 실패를 숨기지 않고 머지를 막습니다.” |
-| 5 | `최소 패치 적용` | 버튼 클릭 후 상태 변화 | “실패 로그를 다음 입력으로 바꿔 최소 패치만 적용합니다.” |
-| 6 | `Harness Gate` | unit, owner config, data boundary, observability, rollback PASS | “PASS는 AI를 믿는다는 뜻이 아니라, 구조 검증을 통과했다는 뜻입니다.” |
-| 7 | `Pilot Go/No-Go` | Decision: Go, 파일럿 지표 | “확산 판단은 기능표가 아니라 데이터 경계, observability, required checks, 리뷰 p95 같은 운영 기준으로 닫습니다.” |
+| 3 | `GitHub Codegen Pipeline` | Issue, labels, Assign to Copilot, PR Checks, CODEOWNERS | “코드 자동생성은 GitHub 이슈 계약과 required checks 안에서 움직이게 합니다.” |
+| 4 | `Coding Agent PR` | changed files, PR description, required checks | “Coding Agent에는 큰 문제 전체가 아니라 좁고 검증 가능한 PR 계약만 맡깁니다.” |
+| 5 | `Failed Tests` | retry test FAIL 로그, blocked 상태 | “오늘 데모의 핵심은 AI PR이 실패하는 순간입니다. 하네스는 이 실패를 숨기지 않고 머지를 막습니다.” |
+| 6 | `최소 패치 적용` | 버튼 클릭 후 상태 변화 | “실패 로그를 다음 입력으로 바꿔 최소 패치만 적용합니다.” |
+| 7 | `Harness Gate` | unit, owner config, data boundary, observability, rollback PASS | “PASS는 AI를 믿는다는 뜻이 아니라, 구조 검증을 통과했다는 뜻입니다.” |
+| 8 | `Pilot Go/No-Go` | Decision: Go, 파일럿 지표 | “확산 판단은 기능표가 아니라 데이터 경계, observability, required checks, 리뷰 p95 같은 운영 기준으로 닫습니다.” |
 
 ### 5. 시간별 진행 옵션
 
 | 사용 가능 시간 | 추천 단계 | 운영 방식 |
 | --- | --- | --- |
 | 3분 | `Coupon API Bug` -> `Failed Tests` -> `최소 패치 적용` -> `Harness Gate` | 메시지만 빠르게 전달합니다. 실패와 PASS 전환을 중심으로 보여줍니다. |
-| 7분 | 전체 6단계 | 왼쪽 타임라인을 순서대로 누르며 각 단계의 Evidence를 한 문장씩 짚습니다. |
-| 12분 이상 | 전체 6단계 + Pilot 설명 | Pilot Go/No-Go 지표와 실제 팀 도입 기준까지 연결합니다. |
+| 7분 | 전체 7단계 | 왼쪽 타임라인을 순서대로 누르며 각 단계의 Evidence를 한 문장씩 짚습니다. |
+| 12분 이상 | 전체 7단계 + Pilot 설명 | Pilot Go/No-Go 지표와 실제 팀 도입 기준까지 연결합니다. |
 
 ### 6. 발표 중 탭 전환 방식
 
 - Slides 1-3: 발표 덱만 사용합니다.
-- Slides 4-9: 데모 앱으로 전환해 `Coupon API Bug`를 보여줍니다.
-- Slide 10: `Acceptance Criteria`로 이동합니다.
-- Slides 11-14: `Coding Agent PR`로 이동합니다.
-- Slides 15-16: `Failed Tests`를 보여주고, 패치 버튼은 아직 누르지 않습니다.
-- Slides 17-19: `최소 패치 적용`을 누른 뒤 `Harness Gate`를 보여줍니다.
-- Slides 20-23: `Pilot Go/No-Go`로 마무리합니다.
+- Slides 4-8: 데모 앱으로 전환해 `Coupon API Bug`를 보여줍니다.
+- Slide 9: `Acceptance Criteria`로 이동합니다.
+- Slides 10-13: `GitHub Codegen Pipeline`과 `Coding Agent PR`로 이동합니다.
+- Slides 14-15: `Failed Tests`를 보여주고, 패치 버튼은 아직 누르지 않습니다.
+- Slides 16-18: `최소 패치 적용`을 누른 뒤 `Harness Gate`를 보여줍니다.
+- Slides 19-21: `Pilot Go/No-Go`로 마무리합니다.
 
 슬라이드와 데모 앱을 동시에 설명하려고 하지 말고, 슬라이드에서 개념을 말한 뒤 데모 앱으로 전환해 한 장면만 보여주는 방식이 가장 안정적입니다.
 
@@ -448,22 +450,24 @@ curl -sSf http://127.0.0.1:5173/ | head -n 5
 | Slides | Demo stage | 발표 중 조작 | 설명 포인트 |
 | --- | --- | --- | --- |
 | 4-9 | `Coupon API Bug` | 버그를 바로 고치지 않고 endpoint, signal, reproduction request를 보여줍니다. | 모호한 이슈를 재현 가능한 작업 계약으로 바꿉니다. |
-| 10 | `Acceptance Criteria` | AC와 test id가 코드보다 먼저 정리되는 장면을 보여줍니다. | Agent Mode의 첫 가치는 코드 생성이 아니라 질문 생성과 AC 정리입니다. |
-| 11-14 | `Coding Agent PR` | changed files와 PR description을 보여줍니다. | Coding Agent에는 큰 문제 전체가 아니라 좁고 검증 가능한 PR 계약만 맡깁니다. |
-| 15-16 | `Failed Tests` | FAIL 로그와 blocked 상태를 먼저 보여주고, 아직 패치 버튼은 누르지 않습니다. | AI PR이 실패하고 required checks가 머지를 막는 장면이 핵심입니다. |
-| 17-19 | `Harness Gate` | `최소 패치 적용`을 누른 뒤 PASS 전환과 evidence를 보여줍니다. | 실패 로그를 다음 입력으로 바꾸고 하네스가 구조 검증을 수행합니다. |
-| 20-23 | `Pilot Go/No-Go` | 패치 전 No-Go와 패치 후 Go 판단 기준을 연결합니다. | 확산 판단은 기능표가 아니라 데이터 경계, required checks, 리뷰 p95 같은 운영 기준으로 닫습니다. |
+| 9 | `Acceptance Criteria` | AC와 test id가 코드보다 먼저 정리되는 장면을 보여줍니다. | Agent Mode의 첫 가치는 코드 생성이 아니라 질문 생성과 AC 정리입니다. |
+| 10-13 | `GitHub Codegen Pipeline` | Issue, Assign to Copilot, generated PR, PR Checks 흐름을 보여줍니다. | 코드 자동생성은 GitHub 라벨, 템플릿, required checks 안에서 실행됩니다. |
+| 13 | `Coding Agent PR` | changed files와 PR description을 보여줍니다. | Coding Agent에는 큰 문제 전체가 아니라 좁고 검증 가능한 PR 계약만 맡깁니다. |
+| 14-15 | `Failed Tests` | FAIL 로그와 blocked 상태를 먼저 보여주고, 아직 패치 버튼은 누르지 않습니다. | AI PR이 실패하고 required checks가 머지를 막는 장면이 핵심입니다. |
+| 16-18 | `Harness Gate` | `최소 패치 적용`을 누른 뒤 PASS 전환과 evidence를 보여줍니다. | 실패 로그를 다음 입력으로 바꾸고 하네스가 구조 검증을 수행합니다. |
+| 19-21 | `Pilot Go/No-Go` | 패치 전 No-Go와 패치 후 Go 판단 기준을 연결합니다. | 확산 판단은 기능표가 아니라 데이터 경계, required checks, 리뷰 p95 같은 운영 기준으로 닫습니다. |
 
 ## 추천 시연 순서
 
 1. `리셋`을 눌러 초기 상태를 맞춥니다.
 2. `Coupon API Bug`에서 endpoint, signal, reproduction request를 보여줍니다.
 3. `Acceptance Criteria`에서 AC와 test id를 읽어줍니다.
-4. `Coding Agent PR`에서 changed files와 PR description을 보여줍니다.
-5. `Failed Tests`에서 retry test FAIL과 blocked 상태를 강조합니다.
-6. `최소 패치 적용`을 누릅니다.
-7. `Harness Gate`에서 unit, owner config, data boundary, observability, rollback 조건이 PASS로 바뀌는 것을 보여줍니다.
-8. `Pilot Go/No-Go`에서 Decision이 Go로 바뀌는 기준을 설명합니다.
+4. `GitHub Codegen Pipeline`에서 Issue, Assign to Copilot, generated PR, PR Checks 연결선을 보여줍니다.
+5. `Coding Agent PR`에서 changed files와 PR description을 보여줍니다.
+6. `Failed Tests`에서 retry test FAIL과 blocked 상태를 강조합니다.
+7. `최소 패치 적용`을 누릅니다.
+8. `Harness Gate`에서 unit, owner config, data boundary, observability, rollback 조건이 PASS로 바뀌는 것을 보여줍니다.
+9. `Pilot Go/No-Go`에서 Decision이 Go로 바뀌는 기준을 설명합니다.
 
 시간이 부족하면 `Coupon API Bug`, `Failed Tests`, `Harness Gate`, `Pilot Go/No-Go`만 보여도 전체 메시지는 유지됩니다.
 
@@ -488,6 +492,10 @@ curl -sSf http://127.0.0.1:5173/ | head -n 5
 | `config/owners.json` | coupon artifact owner와 review requirement를 정의합니다. |
 | `config/observability.json` | duplicate charge alert, retry SLI, dashboard, review p95 fixture를 정의합니다. |
 | `docs/rollback.md` | rollback trigger, owner, disable path, traffic action, validation command를 정의합니다. |
+| `.github/ISSUE_TEMPLATE/copilot-codegen-task.yml` | GitHub Issue에서 Copilot 코드 생성 작업으로 넘길 입력 계약을 정의합니다. |
+| `.github/pull_request_template.md` | AI-assisted PR의 evidence, 금지 데이터, rollback 체크리스트를 정의합니다. |
+| `.github/workflows/ci.yml` | PR required checks로 사용할 lint, test, build, strict harness workflow 예시입니다. |
+| `.github/CODEOWNERS` | GitHub Rulesets와 함께 owner review gate를 표현합니다. |
 | `src/data/scenario.ts` | 쿠폰 API 버그, AC, PR, Evidence를 담고 있습니다. |
 | `src/lib/demoRunner.ts` | 이전/다음 단계 이동 순서를 정의합니다. |
 | `scripts/demoScenario.ts` | `buggy/fixed` scenario CLI와 JSON fallback을 제공합니다. |
@@ -497,6 +505,7 @@ curl -sSf http://127.0.0.1:5173/ | head -n 5
 
 - `Coupon API Bug`: 모호한 버그 리포트와 재현 요청
 - `Acceptance Criteria`: Agent Mode가 만든 AC와 테스트 후보
+- `GitHub Codegen Pipeline`: Issue, Assign to Copilot, generated PR, required checks, CODEOWNERS 연결
 - `Coding Agent PR`: 좁은 이슈를 위임해 만든 PR 형태
 - `Failed Tests`: retry 테스트 실패와 required checks 차단
 - `Harness Gate`: unit, owner config, data boundary, observability, forbidden pattern, rollback 조건

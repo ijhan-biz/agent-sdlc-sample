@@ -183,7 +183,7 @@ button.ghost {
 
 .live-status-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -202,6 +202,16 @@ button.ghost {
 .live-status-card.green {
   border-color: rgba(100, 226, 187, 0.45);
   background: rgba(100, 226, 187, 0.1);
+}
+
+.live-status-card.blue {
+  border-color: rgba(120, 183, 255, 0.45);
+  background: rgba(120, 183, 255, 0.1);
+}
+
+.live-status-card.yellow {
+  border-color: rgba(255, 209, 102, 0.45);
+  background: rgba(255, 209, 102, 0.1);
 }
 
 .live-status-card span {
@@ -324,8 +334,164 @@ button.ghost {
 }
 
 .stage-badge.pass,
+.stage-badge.ready,
 .stage-badge.go {
   background: #64e2bb;
+}
+
+.github-stage {
+  display: grid;
+  gap: 16px;
+}
+
+.github-summary-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.42fr);
+  gap: 14px;
+  border: 1px solid rgba(120, 183, 255, 0.28);
+  border-radius: 10px;
+  background: rgba(120, 183, 255, 0.08);
+  padding: 16px;
+}
+
+.github-summary-panel strong {
+  display: block;
+  color: #f8fafc;
+  font-size: 1.15rem;
+  line-height: 1.25;
+}
+
+.github-summary-panel p {
+  margin-top: 8px;
+  color: #dbeafe;
+  line-height: 1.48;
+}
+
+.label-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.label-cloud span {
+  border: 1px solid rgba(100, 226, 187, 0.35);
+  border-radius: 999px;
+  background: rgba(100, 226, 187, 0.1);
+  color: #b8fff0;
+  font-size: 0.8rem;
+  font-weight: 850;
+  padding: 5px 9px;
+}
+
+.pipeline-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pipeline-step {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 12px;
+  min-height: 276px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.48);
+  padding: 14px;
+}
+
+.pipeline-step.blue { border-color: rgba(120, 183, 255, 0.46); }
+.pipeline-step.green { border-color: rgba(100, 226, 187, 0.48); }
+.pipeline-step.yellow { border-color: rgba(255, 209, 102, 0.52); }
+.pipeline-step.red { border-color: rgba(255, 143, 131, 0.58); }
+.pipeline-step.purple { border-color: rgba(201, 180, 255, 0.5); }
+
+.pipeline-node {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(212, 217, 0, 0.14);
+  color: #d4d900;
+  font-weight: 900;
+}
+
+.pipeline-body {
+  min-width: 0;
+}
+
+.pipeline-body > span {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.pipeline-body h3 {
+  margin-top: 5px;
+}
+
+.pipeline-body p {
+  margin-top: 8px;
+  color: #dbeafe;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.pipeline-command {
+  display: block;
+  margin-top: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.76);
+  color: #e0f2fe;
+  font: 0.78rem/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+  padding: 8px;
+}
+
+.pipeline-body dl {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 5px 8px;
+  margin: 12px 0 0;
+  font-size: 0.78rem;
+}
+
+.pipeline-body dt {
+  color: #94a3b8;
+  font-weight: 900;
+}
+
+.pipeline-body dd {
+  min-width: 0;
+  margin: 0;
+  color: #e2e8f0;
+  overflow-wrap: anywhere;
+}
+
+.pipeline-body strong {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  margin-top: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  padding: 6px 9px;
+}
+
+.artifact-list {
+  margin: 12px 0 0;
+  padding-left: 18px;
+}
+
+.artifact-list li {
+  overflow-wrap: anywhere;
 }
 
 .panel-heading {
@@ -466,7 +632,9 @@ button.ghost {
   .stage-grid.two,
   .status-strip,
   .live-status-panel,
-  .live-status-grid {
+  .live-status-grid,
+  .github-summary-panel,
+  .pipeline-flow {
     grid-template-columns: 1fr;
   }
 

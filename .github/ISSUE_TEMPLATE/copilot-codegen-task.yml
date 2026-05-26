@@ -1,0 +1,57 @@
+name: Copilot code generation task
+description: Turn an AI-ready issue into a narrow Copilot coding-agent handoff.
+title: "Bug: coupon double redemption on retry"
+labels: ["bug", "ai-candidate"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template only after the team has a small, testable change that can be reviewed through PR checks.
+  - type: input
+    id: affected-endpoint
+    attributes:
+      label: Affected endpoint
+      value: POST /api/coupons/redeem
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      value: |
+        Mobile clients may retry coupon redemption with the same idempotencyKey.
+        The same key must return the first result and must not decrement coupon balance twice.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      value: |
+        - same idempotencyKey returns the first result
+        - coupon balance decremented once
+        - retry and already-used tests pass
+        - public response schema is unchanged
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints
+      value: |
+        - use dummy data only
+        - do not include production logs, customer data, secrets, or tokens
+        - keep the change scoped to coupon redemption and affected tests
+        - include the failing test evidence in the PR body
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification commands
+      value: |
+        npm run test
+        npm run build
+        npm run harness:strict
+    validations:
+      required: true
