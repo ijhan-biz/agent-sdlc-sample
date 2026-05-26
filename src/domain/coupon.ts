@@ -98,7 +98,7 @@ export function runCouponScenario(
     responses.push(response)
 
     if (mode === 'fixed') {
-      responseByIdempotencyKey.set(input.request.idempotencyKey, response)
+      responseByIdempotencyKey.set(`${input.request.idempotencyKey}:${attempt}`, response)
     }
   }
 
