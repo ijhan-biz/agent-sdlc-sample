@@ -20,7 +20,7 @@ describe('coupon scenario runner', () => {
     expect(result.redemptionRecords).toHaveLength(1)
   })
 
-  it('retry: same idempotencyKey across multiple retries does not double-decrement balance', () => {
+  it('does not double-decrement balance when same idempotencyKey is retried multiple times', () => {
     const result = runCouponScenario('fixed', {
       initialBalance: 5,
       retryCount: 3,
@@ -39,7 +39,7 @@ describe('coupon scenario runner', () => {
     expect(result.responses[2].reusedResult).toBe(true)
   })
 
-  it('already-used: second attempt with same idempotencyKey returns the original balanceAfter', () => {
+  it('returns the original balanceAfter when idempotencyKey is reused on a second attempt', () => {
     const result = runCouponScenario('fixed', {
       initialBalance: 10,
       retryCount: 2,
